@@ -1,0 +1,66 @@
+<div style="border: thin solid black;">
+
+    <center>
+        <h2>OpenCV.js Magic box :)</h2>
+        <p id="status">OpenCV.js status: Loading...</p>
+        <div>
+            <div class="row-align">
+                <img id="imageSrc" style="border: none;" />
+                <canvas id="canvasOutputCann" width="300"></canvas>
+                <canvas id="canvasOutput" width="300"></canvas>
+            </div>
+
+            <input type="file" id="fileInput" name="file" />
+        </div>
+    </center>
+
+    <script type="text/javascript">
+        let imgElement = document.getElementById('imageSrc');
+        let inputElement = document.getElementById('fileInput');
+        inputElement.addEventListener('change', (e) => {
+            imgElement.src = URL.createObjectURL(e.target.files[0]);
+        }, false);
+        imgElement.onload = function () {
+            // let mat = cv.imread(imgElement);
+            // cv.cvtColor(mat, mat, cv.COLOR_RGB2GRAY, 0);
+            // cv.Canny(mat, mat, 50, 100, 3, false);
+            // cv.imshow('canvasOutput', mat);
+            // mat.delete();
+
+
+
+
+
+            var img = cv.imread(imgElement);
+            var bl = new cv.Mat();
+            cv.cvtColor(img, bl, cv.COLOR_BGR2GRAY);
+            var cann = new cv.Mat();
+            cv.Canny(bl, cann, 75, 150);
+            var lines = new cv.Mat();
+            cv.HoughLinesP(cann, lines, 1, Math.PI / 180, 100, minLineLength = 200, maxLineGap = 12);
+            //HoughLinesP(image, lines, rho, theta, threshold, minLineLength = 0, maxLineGap = 0);
+            var data = lines.data32S;
+            var d = data.length;
+            for (let i = 0; i < d; i = i + 4) {
+                let x1 = data[i];
+                let y1 = data[i + 1];
+                let x2 = data[i + 2];
+                let y2 = data[i + 3];
+                let p1 = new cv.Point(x1, y1);
+                let p2 = new cv.Point(x2, y2);
+                cv.line(img, p1, p2, new cv.Scalar(255, 0, 255, 0), 3);
+            }
+            //cv.imshow("linesEdges", edges)
+            cv.imshow("canvasOutputCann", cann);
+            cv.imshow("canvasOutput", img);
+        };
+        function onOpenCvReady() {
+            document.getElementById('status').innerHTML = 'OpenCV.js status: Ready.';
+        }
+    </script>
+
+    <script async src="opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+</div>
+
+
+
