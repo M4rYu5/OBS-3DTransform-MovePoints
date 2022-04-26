@@ -1,9 +1,10 @@
 
-
-$(document).ready(() =>{
+var socket;
+$(document).ready(() => 
+{
     appendMessage("Connecting... ");
 
-    let socket = new WebSocket("ws://127.0.0.1:4444");
+	socket = new WebSocket("ws://127.0.0.1:4444");
 
     socket.onopen = function(e) {
       appendMessage("[open] Connection established");
@@ -34,9 +35,20 @@ $(document).ready(() =>{
 
 
 
+$(document).ready(() => 
+{
+	$("#try").click(function() {
+		let a = $("#sha").val();
+		appendMessage("Next message will be sent: " + a);
+		socket.send(a);
+	})
+})
 
-/// --------------------------------------------------------
-/// ----------------- FUNCTIONS  ---------------------------
+
+
+// --------------------------------------------------------
+// ----------------- FUNCTIONS  ---------------------------
+
 
 
 
