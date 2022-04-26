@@ -55,10 +55,11 @@ $(document).ready(() =>
 
 /// --------------------------------------------------------
 /// ----------------- DEBUGGING  ---------------------------
-function appendMessage(message){
+function appendMessage(message) {
     let element = $("<div>");
     element.text(message);
     element.addClass("message");
+	element.addClass("col-12")
     $("#output").append(element);
 }
 
