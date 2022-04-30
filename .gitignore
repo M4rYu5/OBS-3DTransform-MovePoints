@@ -4,7 +4,6 @@
 
 /.test_private_files
 /.vs
-/.gh-pages
 
 # Logs
 logs
