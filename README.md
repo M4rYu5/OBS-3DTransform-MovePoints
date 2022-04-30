@@ -11,3 +11,7 @@
 - `src/ts`: TypeScript files
 - `src/wwwroot`: all site static files (ready to be deployed on github pages)
 - `src/wwwroot`: will be pushed to `gh-pages` (subtree) branch, using `scripts/commit_git-pages.bat`
+
+
+# Dev
+If you're a dev, and want to create an authentication system for OBS, you have [here](./other/dev_websocket.md) a list of inputs and outputs, for each step, with examples in `C#` and `JavaScript`;
