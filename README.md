@@ -15,4 +15,4 @@
 
 
 # Dev
-If you're a dev, and want to create an authentication system for OBS, you have [here](./other/dev_websocket.md) a list of inputs and outputs, for each step, with examples in `C#` and `JavaScript`;
+If you're a dev, and want to create an authentication system for OBS, you have [here](./other/dev_websocket.md) an example of inputs and outputs for each step (`C#` & `JavaScript`).
