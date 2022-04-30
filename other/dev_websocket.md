@@ -1,6 +1,6 @@
 
 ## Connecting to OBS WebSocket
-This page contains inputs and they're coresponding outputs for OBS WebSocket Authentication, according to they're [documentation](https://github.com/obsproject/obs-websocket/blob/4.x-current/docs/generated/protocol.md#authentication).
+This page contains inputs and they're coresponding outputs, on each step, for OBS WebSocket Authentication, according to they're [documentation](https://github.com/obsproject/obs-websocket/blob/4.x-current/docs/generated/protocol.md#authentication).
 - JavaScript
 
 ```JavaScript
