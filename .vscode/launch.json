@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "type": "pwa-chrome",
+            "preLaunchTask": "tsc: build - src/tsconfig.json",
+            "name": "index.html",
+            "request": "launch",
+            "url": "${workspaceRoot}\\src\\wwwroot\\index.html"
+        },
+    ]
+}
