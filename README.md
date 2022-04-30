@@ -11,7 +11,7 @@
 - `src/ts`: TypeScript files
 - `src/wwwroot`: all site static files (ready to be deployed on github pages)
 - `src/wwwroot`: will be pushed to `gh-pages` (subtree) branch, using `scripts/commit_git-pages.bat`
-- `other`: anything that is not directly related to the repository.
+- `other`: anything that is not directly related to this repository.
 
 
 # Dev
