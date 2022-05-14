@@ -140,6 +140,7 @@ var OBS;
             this.resetSocket();
         };
         ObsConnection.prototype.resetSocket = function () {
+            CustomLogger.Log("[socket reset]", CustomLogger.LogType.info);
             this.password = null;
             if (this.webSocket == null)
                 return;
