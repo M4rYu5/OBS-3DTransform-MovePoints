@@ -91,6 +91,8 @@ namespace OBS {
 
         /** clean any link to webSocket and close it */
         private resetSocket() {
+            CustomLogger.Log("[socket reset]", CustomLogger.LogType.info);
+
             this.password = null;
 
             if (this.webSocket == null)
