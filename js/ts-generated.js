@@ -52,11 +52,6 @@ var func;
     }
     func.disconneted = disconneted;
 })(func || (func = {}));
-function greeter(person) {
-    return "Hello, " + person;
-}
-var user = "Jane User";
-greeter(user);
 var OBS;
 (function (OBS) {
     var ConnectionResult;
@@ -75,33 +70,27 @@ var OBS;
             this.tryAuthMessageIdentifier = "MessageIdentifier-TryAuth";
             this.webSocket = null;
             this.socketOnOpen = function (event) {
-                CustomLogger.Log("[OPEN] Connection established");
                 _this.webSocket.send('{"request-type": "GetAuthRequired", "message-id": "' + _this.checkAuthMessageIdentifier + '"}');
             };
             this.socketOnMessage = function (event) {
                 var _a;
                 if (_this.tryedToConnect == false) {
-                    CustomLogger.Log("[RECEIVED auth]: " + event.data);
                     _this.resolveAuth(event.data);
                 }
                 else {
-                    CustomLogger.Log("[RECEIVED external]: " + event.data);
                     (_a = _this.onReceivedMessageHandler) === null || _a === void 0 ? void 0 : _a.call(_this, event.data);
                 }
             };
             this.socketOnClose = function (event) {
                 var _a;
                 if (event.wasClean) {
-                    CustomLogger.Log("[close] Connection closed cleanly, code=".concat(event.code, " reason=").concat(event.reason));
                 }
                 else {
-                    CustomLogger.Log('[close] Connection died');
                 }
                 _this.resetSocket();
                 (_a = _this.onDisconnectHandler) === null || _a === void 0 ? void 0 : _a.call(_this);
             };
             this.socketOnError = function (error) {
-                CustomLogger.Log("[error] ".concat(JSON.stringify(error)));
             };
         }
         ObsConnection.prototype.sendMessage = function (jsonMessage) {
@@ -160,7 +149,6 @@ var OBS;
             var _a;
             this.tryedToConnect = true;
             (_a = this.onConnectResultHandler) === null || _a === void 0 ? void 0 : _a.call(this, connection);
-            CustomLogger.Log("[connectionResult]: " + connection, CustomLogger.LogType.info);
         };
         ObsConnection.prototype.resolveAuth = function (obj) {
             var data = JSON.parse(obj);
@@ -184,23 +172,17 @@ var OBS;
         ObsConnection.prototype.auth = function (challenge, salt) {
             var password = this.password;
             this.password = null;
-            var authTokenG = "";
-            {
-                var sha = sha256(password + salt);
-                var shaPchallenge = hexToBase64(sha) + challenge;
-                var sha2 = sha256(shaPchallenge);
-                var authToken = hexToBase64(sha2);
-                authTokenG = authToken;
-            }
+            var sha = sha256(password + salt);
+            var shaPchallenge = hexToBase64(sha) + challenge;
+            var sha2 = sha256(shaPchallenge);
+            var authToken = hexToBase64(sha2);
             var temp = {
                 "request-type": "Authenticate",
-                "auth": authTokenG,
+                "auth": authToken,
                 "message-id": this.tryAuthMessageIdentifier
             };
-            CustomLogger.Log('_');
             var a = JSON.stringify(temp);
             this.webSocket.send(a);
-            CustomLogger.Log(a);
         };
         return ObsConnection;
     }());
