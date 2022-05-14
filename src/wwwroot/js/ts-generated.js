@@ -25,8 +25,12 @@ var CustomLogger;
 })(CustomLogger || (CustomLogger = {}));
 var defaultIP = "127.0.0.1";
 var defaultPort = "4444";
+var localStorageIpIdentifier = "localStorrageIpIdentifier";
+var localStoragePortIdentifier = "localStorragePortIdentifier";
+var localStoragePasswordIdentifier = "localStorragePasswordIdentifier";
 var obsConnection;
 $(function () {
+    loadSettings();
     obsConnection = new OBS.ObsConnection();
     obsConnection.onConnectResultHandler = func.connected;
     obsConnection.onDisconnectHandler = func.disconneted;
@@ -38,9 +42,32 @@ $(function () {
         if (port == "")
             port = defaultPort;
         var password = $("#passwordInput").val().toString();
+        saveSettings(ip, port, password);
         obsConnection.connect(ip, port, password);
     });
 });
+function loadSettings() {
+    var ip = localStorage.getItem(localStorageIpIdentifier);
+    if (ip != null && ip)
+        $("#ipInput").val(ip);
+    var port = localStorage.getItem(localStoragePortIdentifier);
+    if (port != null)
+        $("#portInput").val(port);
+}
+function saveSettings(ip, port, password) {
+    if (ip != null) {
+        if (ip != defaultIP)
+            localStorage.setItem(localStorageIpIdentifier, ip);
+        else
+            localStorage.removeItem(localStorageIpIdentifier);
+    }
+    if (port != null) {
+        if (port != defaultPort)
+            localStorage.setItem(localStoragePortIdentifier, port);
+        else
+            localStorage.removeItem(localStoragePortIdentifier);
+    }
+}
 var func;
 (function (func) {
     function connected(connection) {
@@ -197,57 +224,4 @@ var OBS;
     }());
     OBS.ObsConnection = ObsConnection;
 })(OBS || (OBS = {}));
-var DEV2;
-(function (DEV2) {
-    var OBSManager = (function () {
-        function OBSManager() {
-            this.isConnected = false;
-        }
-        OBSManager.prototype.connect = function (ip, port) {
-            var _this = this;
-            if (ip === void 0) { ip = "127.0.0.1"; }
-            if (port === void 0) { port = "4444"; }
-            webSocket === null || webSocket === void 0 ? void 0 : webSocket.close();
-            this.isConnected = false;
-            var webSocket = new WebSocket("ws://".concat(ip, ":").concat(port));
-            webSocket.onopen = function (e) {
-                var _a;
-                DEV.appendMessage("[open] Connection established");
-                (_a = _this.onConnectHandler) === null || _a === void 0 ? void 0 : _a.call(_this, true);
-            };
-            webSocket.onmessage = function (event) {
-            };
-            webSocket.onclose = function (event) {
-                var _a;
-                if (event.wasClean) {
-                    DEV.appendMessage("[close] Connection closed cleanly, code=".concat(event.code, " reason=").concat(event.reason));
-                }
-                else {
-                    DEV.appendMessage('[close] Connection died');
-                }
-                (_a = _this.onDisconnectHandler) === null || _a === void 0 ? void 0 : _a.call(_this);
-            };
-            webSocket.onerror = function (error) {
-                DEV.appendMessage("[error] ".concat(JSON.stringify(error)));
-            };
-        };
-        OBSManager.prototype.disconnect = function () {
-            this.webSocket.close();
-            this.webSocket = null;
-        };
-        return OBSManager;
-    }());
-    DEV2.OBSManager = OBSManager;
-})(DEV2 || (DEV2 = {}));
-var DEV;
-(function (DEV) {
-    function appendMessage(message) {
-        var element = $("<div>");
-        element.text(message);
-        element.addClass("message");
-        element.addClass("col-12");
-        $("#output").append(element);
-    }
-    DEV.appendMessage = appendMessage;
-})(DEV || (DEV = {}));
 //# sourceMappingURL=ts-generated.js.map
