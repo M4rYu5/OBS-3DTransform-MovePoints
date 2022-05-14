@@ -70,27 +70,33 @@ var OBS;
             this.tryAuthMessageIdentifier = "MessageIdentifier-TryAuth";
             this.webSocket = null;
             this.socketOnOpen = function (event) {
+                CustomLogger.Log("[OPEN] Connection established");
                 _this.webSocket.send('{"request-type": "GetAuthRequired", "message-id": "' + _this.checkAuthMessageIdentifier + '"}');
             };
             this.socketOnMessage = function (event) {
                 var _a;
                 if (_this.tryedToConnect == false) {
+                    CustomLogger.Log("[RECEIVED auth]: " + event.data);
                     _this.resolveAuth(event.data);
                 }
                 else {
+                    CustomLogger.Log("[RECEIVED external]: " + event.data);
                     (_a = _this.onReceivedMessageHandler) === null || _a === void 0 ? void 0 : _a.call(_this, event.data);
                 }
             };
             this.socketOnClose = function (event) {
                 var _a;
                 if (event.wasClean) {
+                    CustomLogger.Log("[close] Connection closed cleanly, code=".concat(event.code, " reason=").concat(event.reason));
                 }
                 else {
+                    CustomLogger.Log('[close] Connection died');
                 }
                 _this.resetSocket();
                 (_a = _this.onDisconnectHandler) === null || _a === void 0 ? void 0 : _a.call(_this);
             };
             this.socketOnError = function (error) {
+                CustomLogger.Log("[error] ".concat(JSON.stringify(error)));
             };
         }
         ObsConnection.prototype.sendMessage = function (jsonMessage) {
@@ -149,6 +155,7 @@ var OBS;
             var _a;
             this.tryedToConnect = true;
             (_a = this.onConnectResultHandler) === null || _a === void 0 ? void 0 : _a.call(this, connection);
+            CustomLogger.Log("[connectionResult]: " + connection, CustomLogger.LogType.info);
         };
         ObsConnection.prototype.resolveAuth = function (obj) {
             var data = JSON.parse(obj);
@@ -181,8 +188,9 @@ var OBS;
                 "auth": authToken,
                 "message-id": this.tryAuthMessageIdentifier
             };
-            var a = JSON.stringify(temp);
-            this.webSocket.send(a);
+            CustomLogger.Log('[Sending Auth Token]', CustomLogger.LogType.info);
+            var token = JSON.stringify(temp);
+            this.webSocket.send(token);
         };
         return ObsConnection;
     }());
