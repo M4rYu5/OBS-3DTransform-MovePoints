@@ -1,4 +1,6 @@
 
+
+
 /* body{
     background-color: #2d2d33;
     color: white;
@@ -17,3 +19,17 @@
 }
 
 
+
+
+
+
+/* ++++++++++++++++++++++++++++++++++++++++++ */
+/* everything below is for debug purpose only */
+.log{
+    font-size: small;
+    color: gray;
+}
+
+.logInfo{
+    color: #2fafaf;
+}
