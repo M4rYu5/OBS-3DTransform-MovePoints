@@ -1,7 +1,9 @@
 # WIP
 
 # Project
-  Work in progress project that will connect to [OBS WebSocket](https://obsproject.com/forum/resources/obs-websocket-remote-control-obs-studio-from-websockets.466/) and allows easier contorol of [StreamFX](https://obsproject.com/forum/threads/streamfx-for-obs%C2%AE-studio.76619/) 3D Transform.
+[work in progress] Browser base Free Transform for OBS. _Requires [OBS WebSocket](https://obsproject.com/forum/resources/obs-websocket-remote-control-obs-studio-from-websockets.466/) and [StreamFX](https://obsproject.com/forum/threads/streamfx-for-obs%C2%AE-studio.76619/) OBS plugins_.
+
+
 
 ## Structure
 - `{root}`: repository related files
