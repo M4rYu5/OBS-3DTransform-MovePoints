@@ -109,28 +109,34 @@ namespace OBS {
         private setObsConnectionResult(connection: ConnectionResult) {
             this.tryedToConnect = true;
             this.onConnectResultHandler?.call(this, connection);
+            CustomLogger.Log("[connectionResult]: " + connection, CustomLogger.LogType.info);
         }
 
         /** onOpen webSocket handler */
         private socketOnOpen = (event: Event) => {
+            CustomLogger.Log("[OPEN] Connection established");
             // check if auth is required
             this.webSocket.send('{"request-type": "GetAuthRequired", "message-id": "' + this.checkAuthMessageIdentifier + '"}');
         }
         /** onMessage webSocket handler */
         private socketOnMessage = (event: MessageEvent) => {
             if (this.tryedToConnect == false) {
+                CustomLogger.Log("[RECEIVED auth]: " + event.data)
                 this.resolveAuth(event.data);
             }
             else {
+                CustomLogger.Log("[RECEIVED external]: " + event.data)
                 this.onReceivedMessageHandler?.call(this, event.data);
             }
         }
         /** onClose webSocket handler */
         private socketOnClose = (event: CloseEvent) => {
             if (event.wasClean) {
+                CustomLogger.Log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
             } else {
                 // e.g. server process killed or network down
                 // event.code is usually 1006 in this case
+                CustomLogger.Log('[close] Connection died');
             }
 
             this.resetSocket();
@@ -140,6 +146,7 @@ namespace OBS {
         private socketOnError = (error: Event) => {
             // something went wrong with the connection,
             // onclose will be called
+            CustomLogger.Log(`[error] ${JSON.stringify(error)}`);
         }
 
         /** handle the connection and auth flow */
@@ -181,13 +188,17 @@ namespace OBS {
             let sha2 = sha256(shaPchallenge);
             let authToken = hexToBase64(sha2);
 
-            let temp = {    
+            let temp = {
                 "request-type": "Authenticate",
                 "auth": authToken,
                 "message-id": this.tryAuthMessageIdentifier
             }
-            let a: string = JSON.stringify(temp);
-            this.webSocket.send(a);
+
+            CustomLogger.Log('[Sending Auth Token]', CustomLogger.LogType.info);
+            let token: string = JSON.stringify(temp);
+            this.webSocket.send(token);
+            //CustomLogger.Log(a);
+
         }
 
     }
