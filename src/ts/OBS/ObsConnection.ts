@@ -26,7 +26,7 @@ namespace OBS {
         protected webSocket: WebSocket = null;
 
 
-        /** Set this handler to get notified about connect()'s resutl */
+        /** Set this handler to get notified about connect()'s result */
         public onConnectResultHandler: ConnectionDelegate;
         /** Set this handler to get notirifed when the socket disconnected */
         public onDisconnectHandler: EndDelegate;
@@ -110,7 +110,7 @@ namespace OBS {
 
         private setObsConnectionResult(connection: ConnectionResult) {
             this.tryedToConnect = true;
-            this.onConnectResultHandler?.call(this, connection);
+            this.connectResultHandler(connection);
             CustomLogger.Log("[connectionResult]: " + connection, CustomLogger.LogType.info);
         }
 
@@ -128,7 +128,7 @@ namespace OBS {
             }
             else {
                 CustomLogger.Log("[RECEIVED external]: " + event.data)
-                this.onReceivedMessageHandler?.call(this, event.data);
+                this.receivedMessageHandler(event.data);
             }
         }
         /** onClose webSocket handler */
@@ -142,7 +142,7 @@ namespace OBS {
             }
 
             this.resetSocket();
-            this.onDisconnectHandler?.call(this);
+            this.disconnectHandler();
         }
         /** onError webSocket handler */
         private socketOnError = (error: Event) => {
@@ -203,6 +203,19 @@ namespace OBS {
 
         }
 
+        
+        /** notified about connect()'s result */
+        protected connectResultHandler = (connection: ConnectionResult) => {
+            this.onConnectResultHandler?.call(this, connection);
+        };
+        /** notiried when the socket disconnected */
+        protected disconnectHandler = () => {
+            this.onDisconnectHandler?.call(this);
+        };
+        /** json messages from OBS WebSocket */
+        protected receivedMessageHandler = (jsonMessage: string) => {
+            this.onReceivedMessageHandler?.call(jsonMessage);
+        };
     }
 
 }
