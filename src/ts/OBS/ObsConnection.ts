@@ -8,9 +8,9 @@ namespace OBS {
         socketConnectionError
     }
 
-    type ConnectionDelegate = (connection: ConnectionResult) => void;
-    type EndDelegate = () => void;
-    type ReceivedMessageDelegate = (jsonMessage: string) => void;
+    type ConnectionResultCallback = (connection: ConnectionResult) => void;
+    type DisconnectedCallback = () => void;
+    type MessageReceivedCallback = (jsonMessage: string) => void;
 
 
 
@@ -27,16 +27,44 @@ namespace OBS {
 
 
         /** Set this handler to get notified about connect()'s result */
-        public onConnectResultHandler: ConnectionDelegate;
+        private connectionResultCallback: ConnectionResultCallback = null;
         /** Set this handler to get notirifed when the socket disconnected */
-        public onDisconnectHandler: EndDelegate;
+        private disconnectedCallback: DisconnectedCallback = null;
         /** Set this handler to get json messages from OBS WebSocket */
-        public onReceivedMessageHandler: ReceivedMessageDelegate;
+        private messageReceivedCallback: MessageReceivedCallback = null;
+
+
+
+
+
+        /** 
+         * set the connection result handler
+         * @param onConnectionResult will be callded, after a connection attempt, with connection result
+         */
+        public setConnectionsResultCallback(onConnectionResult: ConnectionResultCallback) {
+            this.connectionResultCallback = onConnectionResult;
+        }
+
+        /**
+         * set the disconnected handler
+         * @param onDisconnected will be called on connection disconnected
+         */
+        public setDisconnectedCallback(onDisconnected: DisconnectedCallback) {
+            this.disconnectedCallback = onDisconnected;
+        }
+
+        /**
+         * set a handler to receive raw messages from OBS WebSocket
+         * @param onMessageReceived called when a new message was received from OBS (does not include messages handled by this (ObsConnection) object)
+         */
+        public setMessageReceivedCallback(onMessageReceived: MessageReceivedCallback) {
+            this.messageReceivedCallback = onMessageReceived;
+        }
+
 
 
         /**
          * Send json message to OBS WebSocket
-         * Responses are comming through onReceivedMessageHandler
          * @param jsonMessage json message; see more here: https://github.com/obsproject/obs-websocket/blob/4.x-current/docs/generated/protocol.md#getversion
          * @returns returns false when the message could not be send
          */
@@ -110,7 +138,7 @@ namespace OBS {
 
         private setObsConnectionResult(connection: ConnectionResult) {
             this.tryedToConnect = true;
-            this.connectResultHandler(connection);
+            this.onConnectResult(connection);
             CustomLogger.Log("[connectionResult]: " + connection, CustomLogger.LogType.info);
         }
 
@@ -128,7 +156,7 @@ namespace OBS {
             }
             else {
                 CustomLogger.Log("[RECEIVED external]: " + event.data)
-                this.receivedMessageHandler(event.data);
+                this.onMessageReceived(event.data);
             }
         }
         /** onClose webSocket handler */
@@ -142,7 +170,7 @@ namespace OBS {
             }
 
             this.resetSocket();
-            this.disconnectHandler();
+            this.onDisconnected();
         }
         /** onError webSocket handler */
         private socketOnError = (error: Event) => {
@@ -203,18 +231,18 @@ namespace OBS {
 
         }
 
-        
+
         /** notified about connect()'s result */
-        protected connectResultHandler = (connection: ConnectionResult) => {
-            this.onConnectResultHandler?.call(this, connection);
+        protected onConnectResult = (connection: ConnectionResult) => {
+            this.connectionResultCallback?.call(this, connection);
         };
         /** notiried when the socket disconnected */
-        protected disconnectHandler = () => {
-            this.onDisconnectHandler?.call(this);
+        protected onDisconnected = () => {
+            this.disconnectedCallback?.call(this);
         };
         /** json messages from OBS WebSocket */
-        protected receivedMessageHandler = (jsonMessage: string) => {
-            this.onReceivedMessageHandler?.call(jsonMessage);
+        protected onMessageReceived = (jsonMessage: string) => {
+            this.messageReceivedCallback?.call(jsonMessage);
         };
     }
 

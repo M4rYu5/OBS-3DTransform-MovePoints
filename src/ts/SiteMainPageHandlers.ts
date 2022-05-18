@@ -14,8 +14,8 @@ $(() => {
 
     // construct
     obsConnection = new OBS.ObsConnection();
-    obsConnection.onConnectResultHandler = func.connected;
-    obsConnection.onDisconnectHandler = func.disconneted;
+    obsConnection.setConnectionsResultCallback(func.connected);
+    obsConnection.setDisconnectedCallback(func.disconneted);
 
 
     // on connect
