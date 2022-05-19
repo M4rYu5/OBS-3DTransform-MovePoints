@@ -1,7 +1,9 @@
- namespace CustomLogger {
+namespace CustomLogger {
     export enum LogType {
         none,
-        info
+        info,
+        wornign,
+        error
     }
 
     export function Log(message: string, type: LogType = LogType.none) {
@@ -12,6 +14,12 @@
         switch (type) {
             case LogType.info:
                 element.addClass("logInfo");
+                break;
+            case LogType.wornign:
+                element.addClass("logWorning");
+                break;
+            case LogType.error:
+                element.addClass("logError");
                 break;
             default:
                 break;
