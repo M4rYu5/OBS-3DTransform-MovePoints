@@ -6,16 +6,16 @@ let localStorageIpIdentifier: string = "localStorrageIpIdentifier";
 let localStoragePortIdentifier: string = "localStorragePortIdentifier";
 let localStoragePasswordIdentifier: string = "localStorragePasswordIdentifier";
 
-let obsConnection: OBS.ObsManager;
+let obsManager: OBS.ObsManager;
 
 $(() => {
     loadSettings();
 
 
     // construct
-    obsConnection = new OBS.ObsManager();
-    obsConnection.setConnectionResultCallback(func.connected);
-    obsConnection.setDisconnectedCallback(func.disconneted);
+    obsManager = new OBS.ObsManager();
+    obsManager.setConnectionResultCallback(func.connected);
+    obsManager.setDisconnectedCallback(func.disconneted);
 
 
     // on connect
@@ -29,10 +29,14 @@ $(() => {
 
 
 
-        obsConnection.connect(ip, port, password);
-    })
+        obsManager.connect(ip, port, password);
+        
+    });
 
-
+    // send raw debugging to socket
+    $('#try').on("click", () =>{
+        obsManager.getConnection().sendMessage($("#rawMessageInput").val().toString());
+    });
 })
 
 
