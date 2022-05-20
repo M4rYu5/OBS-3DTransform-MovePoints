@@ -8,9 +8,9 @@ namespace OBS {
         socketConnectionError
     }
 
-    type ConnectionResultCallback = (connection: ConnectionResult) => void;
-    type DisconnectedCallback = () => void;
-    type MessageReceivedCallback = (jsonMessage: string) => void;
+    export type ConnectionResultCallback = (connection: ConnectionResult) => void;
+    export type DisconnectedCallback = () => void;
+    export type MessageReceivedCallback = (jsonMessage: string) => void;
 
 
 

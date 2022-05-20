@@ -33,3 +33,11 @@
 .logInfo{
     color: #2fafaf;
 }
+
+.logWorning{
+    color: orange;
+}
+
+.logError{
+    color: tomato;
+}
