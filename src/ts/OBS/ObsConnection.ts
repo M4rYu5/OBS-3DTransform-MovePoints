@@ -242,7 +242,7 @@ namespace OBS {
         };
         /** json messages from OBS WebSocket */
         protected onMessageReceived = (jsonMessage: string) => {
-            this.messageReceivedCallback?.call(jsonMessage);
+            this.messageReceivedCallback?.call(this, jsonMessage);
         };
     }
 
