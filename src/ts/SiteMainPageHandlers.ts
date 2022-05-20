@@ -62,7 +62,7 @@ function saveSettings(ip: string, port: string, password: string): void {
             localStorage.removeItem(localStoragePortIdentifier);
     }
 
-    // todo: save the passrod; it might need obfuscated
+    // todo: save the passrod; it might need obfuscation
 }
 
 
