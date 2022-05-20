@@ -6,15 +6,15 @@ let localStorageIpIdentifier: string = "localStorrageIpIdentifier";
 let localStoragePortIdentifier: string = "localStorragePortIdentifier";
 let localStoragePasswordIdentifier: string = "localStorragePasswordIdentifier";
 
-let obsConnection: OBS.ObsConnection;
+let obsConnection: OBS.ObsManager;
 
 $(() => {
     loadSettings();
 
 
     // construct
-    obsConnection = new OBS.ObsConnection();
-    obsConnection.setConnectionsResultCallback(func.connected);
+    obsConnection = new OBS.ObsManager();
+    obsConnection.setConnectionResultCallback(func.connected);
     obsConnection.setDisconnectedCallback(func.disconneted);
 
 
@@ -31,6 +31,8 @@ $(() => {
 
         obsConnection.connect(ip, port, password);
     })
+
+
 })
 
 
