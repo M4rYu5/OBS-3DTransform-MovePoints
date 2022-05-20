@@ -54,7 +54,7 @@ namespace OBS {
 
         public connect = (ip: string, port: string, password: string) => this.connection.connect(ip, port, password)
 
-
+        public getConnection = () => this.connection;
 
 
         // -------------------------------------------------------------------
