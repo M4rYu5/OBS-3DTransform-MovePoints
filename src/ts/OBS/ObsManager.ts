@@ -15,7 +15,7 @@ namespace OBS {
 
         public constructor() {
             this.connection = new ObsConnection();
-            this.connection.setConnectionsResultCallback(this.onConnectionResultCallback)
+            this.connection.setConnectionResultCallback(this.onConnectionResultCallback)
             this.connection.setDisconnectedCallback(this.onDisconnectedHandler);
             this.connection.setMessageReceivedCallback(this.messageReceivedHandler);
         }

@@ -41,7 +41,7 @@ namespace OBS {
          * set the connection result handler
          * @param onConnectionResult will be callded, after a connection attempt, with connection result
          */
-        public setConnectionsResultCallback(onConnectionResult: ConnectionResultCallback) {
+        public setConnectionResultCallback(onConnectionResult: ConnectionResultCallback) {
             this.connectionResultCallback = onConnectionResult;
         }
 
