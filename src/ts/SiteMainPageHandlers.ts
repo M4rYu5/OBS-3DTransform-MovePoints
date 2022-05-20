@@ -30,8 +30,13 @@ $(() => {
 
 
         obsManager.connect(ip, port, password);
+        
     });
 
+    // send raw debugging to socket
+    $('#try').on("click", () =>{
+        obsManager.getConnection().sendMessage($("#rawMessageInput").val().toString());
+    });
 })
 
 
