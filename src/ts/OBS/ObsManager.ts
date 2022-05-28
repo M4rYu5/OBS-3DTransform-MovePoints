@@ -1,26 +1,20 @@
 namespace OBS {
 
     export type UnhandledMessageCallback = (obj: any) => void;
-    export class ObsManager {
+    export class ObsManager extends ObsConnection {
 
-        private connection;
 
-        /** notified about connect()'s result */
-        private ConnectionResultCallback: ConnectionResultCallback;
-        /** notified when the socket disconnected */
-        private DisconnectedCallback: DisconnectedCallback;
         /** notified when a message wasn't handled by this object */
         private MessageUnhandledCallback: UnhandledMessageCallback;
 
 
-        public constructor() {
-            this.connection = new ObsConnection();
-            this.connection.setConnectionResultCallback(this.onConnectionResultCallback)
-            this.connection.setDisconnectedCallback(this.onDisconnectedHandler);
-            this.connection.setMessageReceivedCallback(this.messageReceivedHandler);
-        }
+        protected override onMessageReceived(this: ObsManager, jsonMessage: string){
+            super.onMessageReceived(jsonMessage);
+            this.messageReceivedHandler(jsonMessage);
+        };
 
-        protected messageReceivedHandler = function (message: string) {
+
+        protected messageReceivedHandler(this: ObsManager, message: string) {
             let obj = null;
             try { obj = JSON.parse(message); } catch { }
             if(obj == null){
@@ -28,33 +22,22 @@ namespace OBS {
                 return;
             }
             if (!this.handleMessage(obj)){
-                this.onMessageUnhandled(this, message);
+                this.onMessageUnhandled(message);
             }
             else{
                 CustomLogger.Log("[ObsManager]: message unhandled: " + message, CustomLogger.LogType.info);
             }
         }
 
-        protected onDisconnectedHandler = () => this.DisconnectedCallback?.call(this);
-        protected onMessageUnhandled = (message: string) => this.MessageUnhandledCallback?.call(this, message);
-        protected onConnectionResultCallback = (result: ConnectionResult) => this.ConnectionResultCallback?.call(this, result);
-
-
-        public setConnectionResultCallback(onConnectionResult: ConnectionResultCallback) {
-            this.ConnectionResultCallback = onConnectionResult;
+        protected onMessageUnhandled(this: ObsManager, message: string){
+            this.MessageUnhandledCallback?.call(this, message);
         }
 
-        public setDisconnectedCallback(onDisconnected: DisconnectedCallback) {
-            this.DisconnectedCallback = onDisconnected;
-        }
 
-        public setUnhandledMessage(onUnhandledMessage: UnhandledMessageCallback) {
+        protected setUnhandledMessageCallback(this: ObsManager, onUnhandledMessage: UnhandledMessageCallback) {
             this.MessageUnhandledCallback = onUnhandledMessage;
         }
 
-        public connect = (ip: string, port: string, password: string) => this.connection.connect(ip, port, password)
-
-        public getConnection = () => this.connection;
 
 
         // -------------------------------------------------------------------

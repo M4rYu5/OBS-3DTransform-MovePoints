@@ -35,7 +35,7 @@ $(() => {
 
     // send raw debugging to socket
     $('#try').on("click", () =>{
-        obsManager.getConnection().sendMessage($("#rawMessageInput").val().toString());
+        obsManager.sendMessage($("#rawMessageInput").val().toString());
     });
 })
 
