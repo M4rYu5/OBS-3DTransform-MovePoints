@@ -26,14 +26,13 @@ namespace OBS {
         protected webSocket: WebSocket = null;
 
 
+
         /** Set this handler to get notified about connect()'s result */
         private connectionResultCallback: ConnectionResultCallback = null;
         /** Set this handler to get notirifed when the socket disconnected */
         private disconnectedCallback: DisconnectedCallback = null;
         /** Set this handler to get json messages from OBS WebSocket */
         private messageReceivedCallback: MessageReceivedCallback = null;
-
-
 
 
 
@@ -104,6 +103,7 @@ namespace OBS {
             this.password = password;
         }
 
+        /** Disconnect from web socket */
         public disconnect() {
             this.password = null;
 
@@ -233,15 +233,15 @@ namespace OBS {
 
 
         /** notified about connect()'s result */
-        protected onConnectResult = (connection: ConnectionResult) => {
+        protected onConnectResult(this: ObsConnection, connection: ConnectionResult) {
             this.connectionResultCallback?.call(this, connection);
         };
         /** notiried when the socket disconnected */
-        protected onDisconnected = () => {
+        protected onDisconnected(this: ObsConnection, ) {
             this.disconnectedCallback?.call(this);
         };
         /** json messages from OBS WebSocket */
-        protected onMessageReceived = (jsonMessage: string) => {
+        protected onMessageReceived(this: ObsConnection, jsonMessage: string) {
             this.messageReceivedCallback?.call(this, jsonMessage);
         };
     }
