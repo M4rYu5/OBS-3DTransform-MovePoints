@@ -139,7 +139,7 @@ namespace OBS {
         private setObsConnectionResult(connection: ConnectionResult) {
             this.tryedToConnect = true;
             this.onConnectResult(connection);
-            CustomLogger.Log("[connectionResult]: " + connection, CustomLogger.LogType.info);
+            CustomLogger.Log("[connectionResult]: " + ConnectionResult[connection], CustomLogger.LogType.info);
         }
 
         /** onOpen webSocket handler */
