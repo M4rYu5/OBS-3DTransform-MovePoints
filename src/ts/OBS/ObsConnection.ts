@@ -201,7 +201,10 @@ namespace OBS {
                     this.setObsConnectionResult(ConnectionResult.succeed);
                 }
                 if (data.status == "error") {
-                    this.setObsConnectionResult(ConnectionResult.wrongAuthDetails)
+                    {
+                        this.setObsConnectionResult(ConnectionResult.wrongAuthDetails)
+                        this.disconnect();
+                    }
                 }
             }
         }
