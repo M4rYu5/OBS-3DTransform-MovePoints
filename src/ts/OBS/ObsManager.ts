@@ -8,7 +8,7 @@ namespace OBS {
         private MessageUnhandledCallback: UnhandledMessageCallback;
 
 
-        protected override onMessageReceived(this: ObsManager, jsonMessage: string){
+        protected override onMessageReceived(this: ObsManager, jsonMessage: string) {
             super.onMessageReceived(jsonMessage);
             this.messageReceivedHandler(jsonMessage);
         };
@@ -17,19 +17,19 @@ namespace OBS {
         protected messageReceivedHandler(this: ObsManager, message: string) {
             let obj = null;
             try { obj = JSON.parse(message); } catch { }
-            if(obj == null){
+            if (obj == null) {
                 CustomLogger.Log("[ObsManager]: empty message received", CustomLogger.LogType.wornign)
                 return;
             }
-            if (!this.handleMessage(obj)){
+            if (!this.handleMessage(obj)) {
                 this.onMessageUnhandled(message);
             }
-            else{
+            else {
                 CustomLogger.Log("[ObsManager]: message unhandled: " + message, CustomLogger.LogType.info);
             }
         }
 
-        protected onMessageUnhandled(this: ObsManager, message: string){
+        protected onMessageUnhandled(this: ObsManager, message: string) {
             this.MessageUnhandledCallback?.call(this, message);
         }
 
