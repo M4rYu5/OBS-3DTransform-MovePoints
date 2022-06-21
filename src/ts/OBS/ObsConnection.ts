@@ -237,7 +237,7 @@ namespace OBS {
             this.connectionResultCallback?.call(this, connection);
         };
         /** notiried when the socket disconnected */
-        protected onDisconnected(this: ObsConnection, ) {
+        protected onDisconnected(this: ObsConnection) {
             this.disconnectedCallback?.call(this);
         };
         /** json messages from OBS WebSocket */
