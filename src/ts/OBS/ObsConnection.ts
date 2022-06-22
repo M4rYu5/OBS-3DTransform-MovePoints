@@ -139,7 +139,7 @@ namespace OBS {
         private setObsConnectionResult(connection: ConnectionResult) {
             this.tryedToConnect = true;
             this.onConnectResult(connection);
-            CustomLogger.Log("[connectionResult]: " + connection, CustomLogger.LogType.info);
+            CustomLogger.Log("[connectionResult]: " + ConnectionResult[connection], CustomLogger.LogType.info);
         }
 
         /** onOpen webSocket handler */
@@ -201,7 +201,10 @@ namespace OBS {
                     this.setObsConnectionResult(ConnectionResult.succeed);
                 }
                 if (data.status == "error") {
-                    this.setObsConnectionResult(ConnectionResult.wrongAuthDetails)
+                    {
+                        this.setObsConnectionResult(ConnectionResult.wrongAuthDetails)
+                        this.disconnect();
+                    }
                 }
             }
         }
@@ -237,7 +240,7 @@ namespace OBS {
             this.connectionResultCallback?.call(this, connection);
         };
         /** notiried when the socket disconnected */
-        protected onDisconnected(this: ObsConnection, ) {
+        protected onDisconnected(this: ObsConnection) {
             this.disconnectedCallback?.call(this);
         };
         /** json messages from OBS WebSocket */

@@ -7,75 +7,90 @@ namespace OBS {
         /** notified when a message wasn't handled by this object */
         private MessageUnhandledCallback: UnhandledMessageCallback;
 
-
-        protected override onMessageReceived(this: ObsManager, jsonMessage: string){
+        /** OBS Connection => onMessageReceived Handler */
+        protected override onMessageReceived(this: ObsManager, jsonMessage: string) {
             super.onMessageReceived(jsonMessage);
             this.messageReceivedHandler(jsonMessage);
         };
 
-
+        /** Handle the OBS Message */
         protected messageReceivedHandler(this: ObsManager, message: string) {
             let obj = null;
             try { obj = JSON.parse(message); } catch { }
-            if(obj == null){
+            if (obj == null) {
                 CustomLogger.Log("[ObsManager]: empty message received", CustomLogger.LogType.wornign)
                 return;
             }
-            if (!this.handleMessage(obj)){
+            if (!this.handleMessage(obj)) {
                 this.onMessageUnhandled(message);
             }
-            else{
+            else {
                 CustomLogger.Log("[ObsManager]: message unhandled: " + message, CustomLogger.LogType.info);
             }
         }
 
-        protected onMessageUnhandled(this: ObsManager, message: string){
+        /** notified when a message wasn't handle by ObsManager 
+         * so that another structure could capture it and process accordingly */
+        protected onMessageUnhandled(this: ObsManager, message: string) {
             this.MessageUnhandledCallback?.call(this, message);
         }
 
-
+        /** set a callback function to process unhandled messages */
         protected setUnhandledMessageCallback(this: ObsManager, onUnhandledMessage: UnhandledMessageCallback) {
             this.MessageUnhandledCallback = onUnhandledMessage;
         }
 
 
 
-        // -------------------------------------------------------------------
-        // from this point down the code is fort handling the message
-        // and will continue grow with the app
-        //    - since this code will be somewhere and it can't be reused
-        //      (for me) it doesn't make sense to construct any new structures
+        //#region message/modules handle code
 
+        protected modules:  { [k: string]: Modules.IModule } = {};
 
-
-
-        // you can add a new caller/handler by
-        // duplicating _descriptivDemoFunctionName_ elements
-
-        protected handleMessage = (obj: any) => {
-            switch(obj["message-id"]){
-                // case ObsMessagesIds._descriptivDemoFunctionName_:
-                //     this._descriptivDemoFunctionName_Dispatcher(obj);
-                default:
-                     return false;
-            }
+        /** add a middle layer or "module" to process received messages. (unique id required) */
+        public addModule(this: ObsManager, module: Modules.IModule): void {
+            if(this.hasModule(module))
+               throw "Module already added";
+                
+            this.modules[module.getIdentifier().getId()] = module;
+        }
+        
+        /** remove a module, identified by module.getIdentifier().getId() */
+        public removeModule(this:ObsManager, module: Modules.IModule): void {
+            this.removeModuleById(module.getIdentifier().getId());
         }
 
-        // public _descriptivDemoFunctionName_Callback: (installed: boolean) => void;
-        // public _descriptivDemoFunctionName_(){
+        /** remove a module using it's id */
+        public removeModuleById(this:ObsManager, moduleId: string): void{
+            if(!this.hasModuleId(moduleId))
+                return;
+            delete this.modules[moduleId]
+        }
+
+        /** check if a module was already added (by comparing they're unique id) */
+        public hasModule(this:ObsManager, module: Modules.IModule): boolean{
+           return this.hasModuleId(module.getIdentifier().getId());
+        }
+
+        /** check if a module was already added (by comparing moduleId with existing module id's) */
+        public hasModuleId(this:ObsManager, moduleId: string): boolean{
+            return moduleId in this.modules;
+        }
+
+        /** handle the incoming OBS messages by dispatching them to modules */
+        protected handleMessage(this: ObsManager, obj: any): boolean{
+            var moduleId = obj["message-id"];
+            if (!this.hasModuleId(moduleId))
+                return false;
+
+            var module = this.modules[moduleId];
+            var arg = new Modules.DispatchArgs();
+            arg.obj = obj;
+            arg.connection = this;
+            module.dispatch(arg);
             
-        // }
-        // private _descriptivDemoFunctionName_Dispatcher = (respoinse: any) => {
-            
-        // }
+            return true;
+        }
+        //#endregion
 
-
-
-    }
-
-    
-    enum ObsMessagesIds{
-        // _descriptivDemoFunctionName_ = "33402fe3d14f",
-        
     }
 }
