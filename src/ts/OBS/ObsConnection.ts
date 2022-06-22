@@ -155,7 +155,8 @@ namespace OBS {
                 this.resolveAuth(event.data);
             }
             else {
-                CustomLogger.Log("[RECEIVED external]: " + event.data)
+                // disabled, since will log every message that's not about atuth
+                // CustomLogger.Log("[RECEIVED external]: " + event.data)
                 this.onMessageReceived(event.data);
             }
         }
