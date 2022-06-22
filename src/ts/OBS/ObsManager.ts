@@ -22,10 +22,8 @@ namespace OBS {
                 return;
             }
             if (!this.handleMessage(obj)) {
-                this.onMessageUnhandled(message);
-            }
-            else {
                 CustomLogger.Log("[ObsManager]: message unhandled: " + message, CustomLogger.LogType.info);
+                this.onMessageUnhandled(message);
             }
         }
 
