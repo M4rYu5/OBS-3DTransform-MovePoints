@@ -1,46 +1,72 @@
 
+// default values
 let defaultIP: string = "127.0.0.1";
 let defaultPort: string = "4444";
 
+// local storrage container names
 let localStorageIpIdentifier: string = "localStorrageIpIdentifier";
 let localStoragePortIdentifier: string = "localStorragePortIdentifier";
 let localStoragePasswordIdentifier: string = "localStorragePasswordIdentifier";
 
+// connection
 let obsManager: OBS.ObsManager;
 
+// init
 $(() => {
     loadSettings();
-
-
-    // construct
-    obsManager = new OBS.ObsManager();
-    obsManager.setConnectionResultCallback(func.connected);
-    obsManager.setDisconnectedCallback(func.disconneted);
-
-
-    // on connect
-    $("#connect").on("click", () => {
-        let ip: string = $("#ipInput").val().toString();
-        if (ip == "") ip = defaultIP;
-        let port: string = $("#portInput").val().toString();
-        if (port == "") port = defaultPort;
-        let password: string = $("#passwordInput").val().toString();
-        saveSettings(ip, port, password);
-
-
-
-        obsManager.connect(ip, port, password);
-        
-    });
-
-    // send raw debugging to socket
-    $('#try').on("click", () =>{
-        obsManager.sendMessage($("#rawMessageInput").val().toString());
-    });
+    initConnection();
+    initActions();
 })
 
 
 
+
+
+
+function initActions() {
+    // on connect/login
+    $("#connect").on("click", () => {
+        let ip: string = $("#ipInput").val().toString();
+        if (ip == "")
+            ip = defaultIP;
+        let port: string = $("#portInput").val().toString();
+        if (port == "")
+            port = defaultPort;
+        let password: string = $("#passwordInput").val().toString();
+        saveSettings(ip, port, password);
+
+        obsManager.connect(ip, port, password);
+    });
+
+    $("#applySceneNameBtn").on("click", () => {
+        let sceneName: string = $("#sceneNameInput").val().toString();
+        obsModules.backgroundUpdater.setSourceName(sceneName);
+    });
+
+    // send raw debugging to socket
+    $('#try').on("click", () => {
+        obsManager.sendMessage($("#rawMessageInput").val().toString());
+    });
+}
+
+function initConnection() {
+    obsManager = new OBS.ObsManager();
+    obsManager.setConnectionResultCallback(func.connected);
+    obsManager.setDisconnectedCallback(func.disconneted);
+
+    addModules(obsManager);
+    return obsManager;
+}
+
+
+namespace obsModules{
+    export var backgroundUpdater: ObsAppModules.UpdatePreview;
+}
+
+function addModules(obsManager: OBS.ObsManager) {
+    obsModules.backgroundUpdater = new ObsAppModules.UpdatePreview($("#scenePreview").get()[0] as HTMLImageElement, 100, obsManager);
+    obsManager.addModule(obsModules.backgroundUpdater);
+}
 
 
 
@@ -78,7 +104,6 @@ function saveSettings(ip: string, port: string, password: string): void {
 
 
 
-
 namespace func {
     export function connected(connection: OBS.ConnectionResult): void {
         console.log("FFFF: connected: " + connection)
@@ -89,3 +114,5 @@ namespace func {
     }
 
 }
+
+
