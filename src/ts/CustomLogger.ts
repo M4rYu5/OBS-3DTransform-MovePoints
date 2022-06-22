@@ -8,23 +8,28 @@ namespace CustomLogger {
 
     export function Log(message: string, type: LogType = LogType.none) {
         let element = $("<div>");
-        element.text(message);
         element.addClass("log");
         element.addClass("col-12");
-        switch (type) {
-            case LogType.info:
-                element.addClass("logInfo");
-                break;
-            case LogType.wornign:
-                element.addClass("logWorning");
-                break;
-            case LogType.error:
-                element.addClass("logError");
-                break;
-            default:
-                break;
+        if (message != null) {
+            element.text(message);
+            switch (type) {
+                case LogType.info:
+                    element.addClass("logInfo");
+                    break;
+                case LogType.wornign:
+                    element.addClass("logWarning");
+                    break;
+                case LogType.error:
+                    element.addClass("logError");
+                    break;
+                default:
+                    break;
+            }
         }
-        element.addClass("")
+        else {
+            element.text("[LOG: RECEIVED NULL MESSAGE]");
+            element.addClass("logWarning");
+        }
         $("#output").append(element);
     }
 }
