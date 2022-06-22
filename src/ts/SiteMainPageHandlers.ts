@@ -26,16 +26,14 @@ $(() => {
 function initActions() {
     // on connect/login
     $("#connect").on("click", () => {
-        let ip: string = $("#ipInput").val().toString();
-        if (ip == "")
-            ip = defaultIP;
-        let port: string = $("#portInput").val().toString();
-        if (port == "")
-            port = defaultPort;
-        let password: string = $("#passwordInput").val().toString();
-        saveSettings(ip, port, password);
-
-        obsManager.connect(ip, port, password);
+        tryConnect();
+    });
+    
+    $("#passwordInput").on("keydown", (e) =>{
+        if(e.key == 'Enter'){
+            $("#passwordInput").trigger("blur");
+            tryConnect();
+        }
     });
 
     $("#applySceneNameBtn").on("click", () => {
@@ -47,6 +45,19 @@ function initActions() {
     $('#try').on("click", () => {
         obsManager.sendMessage($("#rawMessageInput").val().toString());
     });
+
+    function tryConnect() {
+        let ip: string = $("#ipInput").val().toString();
+        if (ip == "")
+            ip = defaultIP;
+        let port: string = $("#portInput").val().toString();
+        if (port == "")
+            port = defaultPort;
+        let password: string = $("#passwordInput").val().toString();
+        saveSettings(ip, port, password);
+
+        obsManager.connect(ip, port, password);
+    }
 }
 
 function initConnection() {
