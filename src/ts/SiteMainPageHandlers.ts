@@ -75,7 +75,8 @@ namespace obsModules{
 }
 
 function addModules(obsManager: OBS.ObsManager) {
-    obsModules.backgroundUpdater = new ObsAppModules.UpdatePreview($("#scenePreview").get()[0] as HTMLImageElement, 100, obsManager);
+    let backgoundUpdateModuleId = new OBS.Modules.ModuleIdentifier(ObsAppModules.ModuleType[ObsAppModules.ModuleType.UpdatePreview]);
+    obsModules.backgroundUpdater = new ObsAppModules.UpdatePreview(backgoundUpdateModuleId, $("#scenePreview").get()[0] as HTMLImageElement, 100, obsManager);
     obsManager.addModule(obsModules.backgroundUpdater);
 }
 

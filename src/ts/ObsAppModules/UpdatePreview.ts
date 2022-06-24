@@ -8,8 +8,8 @@ namespace ObsAppModules {
         protected backgroundImage: HTMLImageElement;
         protected connection: OBS.ObsConnection;
 
-        constructor(backgroundImage: HTMLImageElement, updateInterval: number, connection: OBS.ObsConnection, sourceName?: string) {
-            super(new OBS.Modules.ModuleIdentifier(ModuleType[ModuleType.UpdatePreview]))
+        constructor(identifier: OBS.Modules.ModuleIdentifier, backgroundImage: HTMLImageElement, updateInterval: number, connection: OBS.ObsConnection, sourceName?: string) {
+            super(identifier)
 
             this.backgroundImage = backgroundImage;
             this.connection = connection;
