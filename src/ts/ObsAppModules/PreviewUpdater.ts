@@ -1,14 +1,18 @@
 namespace ObsAppModules {
     export class PreviewUpdater extends OBS.Modules.ModuleBase {
+
         private requestMessage: any = {
             "request-type": "TakeSourceScreenshot",
             "embedPictureFormat": "jpg"
         }
 
+        private timer?: number;
+
         protected backgroundImage: HTMLImageElement;
         protected connection: OBS.ObsConnection;
+        protected updateInterval: number;
 
-        constructor(identifier: OBS.Modules.ModuleIdentifier, backgroundImage: HTMLImageElement, updateInterval: number, connection: OBS.ObsConnection, sourceName?: string) {
+        constructor(identifier: OBS.Modules.ModuleIdentifier, backgroundImage: HTMLImageElement, updateInterval: number, connection: OBS.ObsConnection, sourceName?: string, startOnCreate: boolean = true) {
             super(identifier)
 
             this.backgroundImage = backgroundImage;
@@ -17,11 +21,31 @@ namespace ObsAppModules {
                 this.requestMessage["sourceName"] = sourceName;
             this.setIdentifierToObject(this.requestMessage);
 
-            setInterval(() => this.updateBackground(), updateInterval)
+            this.updateInterval = updateInterval;
+            if (startOnCreate)
+                this.start();
         }
 
+
+        public start(this: PreviewUpdater) {
+            if (!this.isRunning())
+                this.timer = setInterval(() => this.updateBackground(), this.updateInterval);
+        }
+
+        public stop(this: PreviewUpdater) {
+            if (this.isRunning()) {
+                clearInterval(this.timer);
+                this.timer = null;
+            }
+        }
+
+        public isRunning(this: PreviewUpdater) {
+            return this.timer != null;
+        }
+
+
         // called from setInterval
-        protected updateBackground(){
+        protected updateBackground() {
             if (this.connection.isConnected()) {
                 var message = JSON.stringify(this.requestMessage);
                 this.connection.sendMessage(message);
@@ -36,8 +60,9 @@ namespace ObsAppModules {
                 this.removeSourceName();
         }
 
+
         /** remove the source name and go back to default (default: current scene) */
-        public removeSourceName(this: PreviewUpdater){
+        public removeSourceName(this: PreviewUpdater) {
             delete this.requestMessage["sourceName"];
         }
 
