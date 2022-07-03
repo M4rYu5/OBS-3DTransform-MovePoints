@@ -1,5 +1,5 @@
 namespace ObsAppModules {
-    export class UpdatePreview extends OBS.Modules.ModuleBase {
+    export class PreviewUpdater extends OBS.Modules.ModuleBase {
         private requestMessage: any = {
             "request-type": "TakeSourceScreenshot",
             "embedPictureFormat": "jpg"
@@ -29,7 +29,7 @@ namespace ObsAppModules {
         }
 
         /** set the source name of which a screenshot will be taken off (not necessarily a scene)*/
-        public setSourceName(this: UpdatePreview, sourceName?: string) {
+        public setSourceName(this: PreviewUpdater, sourceName?: string) {
             if (sourceName != null && sourceName.length != 0)
                 this.requestMessage["sourceName"] = sourceName;
             else
@@ -37,12 +37,12 @@ namespace ObsAppModules {
         }
 
         /** remove the source name and go back to default (default: current scene) */
-        public removeSourceName(this: UpdatePreview){
+        public removeSourceName(this: PreviewUpdater){
             delete this.requestMessage["sourceName"];
         }
 
         /** handle the received message (the image) */
-        dispatch(this: UpdatePreview, arg: OBS.Modules.DispatchArgs): void {
+        dispatch(this: PreviewUpdater, arg: OBS.Modules.DispatchArgs): void {
             this.backgroundImage.src = arg.obj["img"];
         }
 

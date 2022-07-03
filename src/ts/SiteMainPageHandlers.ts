@@ -71,12 +71,12 @@ function initConnection() {
 
 
 namespace obsModules{
-    export var backgroundUpdater: ObsAppModules.UpdatePreview;
+    export var backgroundUpdater: ObsAppModules.PreviewUpdater;
 }
 
 function addModules(obsManager: OBS.ObsManager) {
     let backgoundUpdateModuleId = new OBS.Modules.ModuleIdentifier(ObsAppModules.ModuleType[ObsAppModules.ModuleType.UpdatePreview]);
-    obsModules.backgroundUpdater = new ObsAppModules.UpdatePreview(backgoundUpdateModuleId, $("#scenePreview").get()[0] as HTMLImageElement, 100, obsManager);
+    obsModules.backgroundUpdater = new ObsAppModules.PreviewUpdater(backgoundUpdateModuleId, $("#scenePreview").get()[0] as HTMLImageElement, 100, obsManager);
     obsManager.addModule(obsModules.backgroundUpdater);
 }
 
