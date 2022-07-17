@@ -1,9 +1,9 @@
 namespace App.InputsFillOnLoad {
 
     // init
-    $(() => {
+    export function init() {
         loadSettings();
-    })
+    }
 
 
 

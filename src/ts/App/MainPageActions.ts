@@ -1,9 +1,9 @@
 namespace App.MainPageActions {
 
     // init
-    $(() => {
+    export function init(){
         initActions();
-    })
+    }
     
     
     function initActions() {

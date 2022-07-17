@@ -3,9 +3,9 @@ namespace App.Connection {
     export let obsManager: OBS.ObsManager;
 
     // init
-    $(() => {
+    export function init(){
         initConnection();
-    })
+    }
 
     function initConnection() {
         obsManager = new OBS.ObsManager();
