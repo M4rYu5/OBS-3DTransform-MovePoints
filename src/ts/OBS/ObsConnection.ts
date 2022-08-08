@@ -13,7 +13,9 @@ namespace OBS {
     export type MessageReceivedCallback = (jsonMessage: string) => void;
 
 
-
+    /**
+     * Creates a valid connection between client and OBS.
+     */
     export class ObsConnection {
 
 
