@@ -5,7 +5,8 @@
       "removeComments": true,
       "preserveConstEnums": true,
       "outFile": "./wwwroot/js/ts-generated.js",
-      "sourceMap": true
+      "sourceMap": true,
+      "target": "ES2022"
     },
     "include": ["ts/**/*"],
     "exclude": ["node_modules", "**/*.spec.ts"]
