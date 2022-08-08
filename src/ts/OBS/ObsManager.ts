@@ -1,6 +1,10 @@
 namespace OBS {
 
     export type UnhandledMessageCallback = (obj: any) => void;
+
+    /**
+     * Adds features over ObsConnection to communicate & control the OBS software.
+     */
     export class ObsManager extends ObsConnection {
 
 
