@@ -117,8 +117,10 @@ namespace OBS {
          */
         private handleAsync(this: ObsManager, obj: any) {
             var messageId = obj["message-id"];
+            if(messageId == null)
+                return false;
             if (!messageId.startsWith(this.asyncMessageIdPrefix))
-                return false
+                return false;
 
             if (messageId in this.unresolvedPromises) {
                 let localResolveFunc = this.unresolvedPromises[messageId].resolve;
