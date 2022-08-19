@@ -148,6 +148,7 @@ namespace OBS {
                 throw "Module already added";
 
             this.modules[module.getIdentifier().getId()] = module;
+            module.onConnectionSet(this);
         }
 
         /** remove a module, identified by module.getIdentifier().getId() */
@@ -159,6 +160,7 @@ namespace OBS {
         public removeModuleById(this: ObsManager, moduleId: string): void {
             if (!this.hasModuleId(moduleId))
                 return;
+            this.modules[moduleId].onConnectionRemoved(this);
             delete this.modules[moduleId]
         }
 
