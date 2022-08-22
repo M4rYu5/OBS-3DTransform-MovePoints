@@ -66,7 +66,7 @@ namespace App.InputsFillOnLoad {
         }
         if (filterNameInput != null) {
             if (filterNameInput != "")
-                localStorage.setItem(App.Defaults.localStorageFilterNameIdentifier, filterin);
+                localStorage.setItem(App.Defaults.localStorageFilterNameIdentifier, filterNameInput);
             else
                 localStorage.removeItem(App.Defaults.localStorageFilterNameIdentifier);
         }
