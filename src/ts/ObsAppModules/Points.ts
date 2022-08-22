@@ -90,7 +90,7 @@ namespace ObsAppModules {
                                 + '", "filterSettings": { "'
                                 + pointId + '.X": ' + corner.X + ', "'
                                 + pointId + '.Y": ' + corner.Y
-                                +' }, "message-id": "ObsAppModules-Points-set-'+ pointId.replace('.', '-') + '-Point" }';
+                                +' }, "message-id": "'+ this.getIdentifier().getId() + '" }';
 
             this.obsManager.sendMessage(message);        
         }
