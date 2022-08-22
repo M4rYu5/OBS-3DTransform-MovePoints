@@ -14,6 +14,9 @@ namespace ObsAppModules {
     type PointDraggableLocation = { point: Point, jQueryPoint: JQuery<HTMLElement>, draggable: any, location: PointLocation }
     type FilterIdentifier = { sourceName: string, filterName: string }
 
+    /**
+     * Generate the Draggable points that will be used to manipulate each corner of 3D Transform Filter in OBS
+     */
     export class Points extends OBS.Modules.ModuleBase {
 
         private points: PointDraggableLocation[] = [];
@@ -39,32 +42,37 @@ namespace ObsAppModules {
 
 
 
+        /** Set the 3D Filter to use. This will remove previous points*/
         public set3DFilter(this: Points, source: string, filter: string) {
             this.filter = { sourceName: source, filterName: filter }
 
-            this.removePoints();
+            this.removeAllPoints();
             this.createAllPoints(source, filter);
-
         }
 
 
 
-
+        /** save the conenction to make further calls */
         public override onConnectionSet(this: Points, obs: OBS.ObsManager): void {
             if (this.obsManager != null)
                 throw "OBS_3D_Points: cannot support multiple connections"
             this.obsManager = obs;
         }
+        /** remove the connection */
         public override onConnectionRemoved(obs: OBS.ObsManager): void {
             this.obsManager = null;
         }
-
+        /** called when a message needs to be handled by this module. (not the case at this moment) */
         public override dispatch(this: Points, arg: OBS.Modules.DispatchArgs): void {
 
         }
 
 
-
+        /** 
+         * called when a HTML point is dragged by user
+         * @param pointLocation one of the four corners of the filter
+         * @param newPosition is a {top, left} type through which is received the new position
+         */
         protected onPointDrag(this: Points, pointLocation: PointLocation, newPosition: any): void {
             console.log(newPosition.left, newPosition.top);
 
@@ -81,12 +89,14 @@ namespace ObsAppModules {
             this.obsManager.sendMessage(message);        
         }
 
+
+        /** creates all four corners of the 3D filter and adds them into DOM */
         protected async createAllPoints(sourceName: string, filterName: string): Promise<void> {
             let filter: any = await this.getObsFilter(sourceName, filterName);
             if (filter == null)
                 return;
 
-            let obsPointSet: PointSet = this.getObsAllPoints(filter);
+            let obsPointSet: PointSet = this.getObsAllPointsPositions(filter);
 
             this.createPoint(PointLocation.topLeft, obsPointSet.topLeft);
             this.createPoint(PointLocation.topRight, obsPointSet.topRight);
@@ -94,15 +104,15 @@ namespace ObsAppModules {
             this.createPoint(PointLocation.bottomLeft, obsPointSet.bottomLeft);
         }
 
-
-
-        protected removePoints(this: Points) {
+        /** remove all the ponts from curent object & DOM */
+        protected removeAllPoints(this: Points) {
             this.points.forEach((value, index) => {
                 value.jQueryPoint.remove();
             })
             this.points.length = 0;
         }
 
+        /** create one point & adds it in DOM */
         protected createPoint(pointLocation: PointLocation, position: Point) {
             let point = $("<div>");
             point.addClass("dot");
@@ -147,7 +157,9 @@ namespace ObsAppModules {
             return filter
         }
 
-        protected getObsAllPoints(this: Points, filter: any): PointSet {
+
+        /** transform all OBS 3D Transform corners positions to 'HTML' Points positions */
+        protected getObsAllPointsPositions(this: Points, filter: any): PointSet {
             let pw = this.parentJQuery.width();
             let ph = this.parentJQuery.height();
             let po = this.parentJQuery.offset();
@@ -161,12 +173,14 @@ namespace ObsAppModules {
             };
         }
 
+        /** transform local Point (html) position into OBS 3D Transform filter coordonates */
         protected calculateCornerPosition(this: Points, pointLocation: PointLocation, newPosition: any): Corner {
             let obsCornerXorLeft = (newPosition.left + this.pointRadius - this.parentJQuery.offset().left) / this.parentJQuery.width() * 200 - 100;
             let obsCornerYorTop = (newPosition.top + this.pointRadius - this.parentJQuery.offset().top) / this.parentJQuery.height() * 200 - 100;
             return { X: obsCornerXorLeft, Y: obsCornerYorTop }
         }
 
+        /** transform OBS 3D Transform filter coordonates to local (html) Point position */
         protected calculatePointPosition(this: Points, pointLocation: PointLocation, filter: any, parentWidth: number, parentHeight: number, parentOffsetLeft: number, parentOffsetTop: number): Point {
 
             let left = (filter.settings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - this.pointRadius;
@@ -174,6 +188,7 @@ namespace ObsAppModules {
             return { left: left, top: top };
         }
 
+        /** generate onDrag handlers for draggable objects, so it will contain the specific corner that triggered the event */
         private getCallbackOnDrag(pointLocation: PointLocation): (newPosition: any) => void {
             switch (pointLocation) {
                 case PointLocation.topLeft: return (newPosition) => this.onPointDrag(PointLocation.topLeft, newPosition);
@@ -183,6 +198,7 @@ namespace ObsAppModules {
             }
         }
 
+        /** get the DOM id of each point, base on their location */
         protected getPointId(pointLocation: PointLocation): string {
             switch (pointLocation) {
                 case PointLocation.topLeft: return "topLeftPoint";
@@ -192,6 +208,7 @@ namespace ObsAppModules {
             }
         }
 
+        /** get the OBS 3D Transform property, base on the point location */
         protected getObsPointId(pointLocation: PointLocation): string {
             switch (pointLocation) {
                 case PointLocation.topLeft: return "Corners.TopLeft";
