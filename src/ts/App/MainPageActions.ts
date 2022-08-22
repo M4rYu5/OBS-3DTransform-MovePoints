@@ -28,6 +28,13 @@ namespace App.MainPageActions {
         $('#try').on("click", () => {
             App.Connection.obsManager.sendMessage($("#rawMessageInput").val().toString());
         });
+
+        // set 3D filter
+        $("#applyFilterBtn").on("click", () => {
+            let scene = $("#filterSceneNameInput").val().toString();
+            let filter = $("#filterNameInput").val().toString();
+            App.Connection.obsModules.cornetPoints.set3DFilter(scene, filter);
+        })
     
         function tryConnect() {
             let ip: string = $("#ipInput").val().toString();

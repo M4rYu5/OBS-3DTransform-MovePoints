@@ -1,6 +1,7 @@
 namespace ObsAppModules{
     /** OBS's Modules identification as an enumeration */
     export enum ModuleType {
-        UpdatePreview
+        UpdatePreview,
+        Point3DTransform,
     }
 }

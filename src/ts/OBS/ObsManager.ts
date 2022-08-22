@@ -117,8 +117,10 @@ namespace OBS {
          */
         private handleAsync(this: ObsManager, obj: any) {
             var messageId = obj["message-id"];
+            if(messageId == null)
+                return false;
             if (!messageId.startsWith(this.asyncMessageIdPrefix))
-                return false
+                return false;
 
             if (messageId in this.unresolvedPromises) {
                 let localResolveFunc = this.unresolvedPromises[messageId].resolve;
@@ -148,6 +150,7 @@ namespace OBS {
                 throw "Module already added";
 
             this.modules[module.getIdentifier().getId()] = module;
+            module.onConnectionSet(this);
         }
 
         /** remove a module, identified by module.getIdentifier().getId() */
@@ -159,6 +162,7 @@ namespace OBS {
         public removeModuleById(this: ObsManager, moduleId: string): void {
             if (!this.hasModuleId(moduleId))
                 return;
+            this.modules[moduleId].onConnectionRemoved(this);
             delete this.modules[moduleId]
         }
 

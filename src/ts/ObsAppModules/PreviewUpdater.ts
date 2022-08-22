@@ -67,10 +67,9 @@ namespace ObsAppModules {
         }
 
         /** handle the received message (the image) */
-        dispatch(this: PreviewUpdater, arg: OBS.Modules.DispatchArgs): void {
+        public override dispatch(this: PreviewUpdater, arg: OBS.Modules.DispatchArgs): void {
             this.backgroundImage.src = arg.obj["img"];
         }
-
     }
 }
 

@@ -5,7 +5,9 @@ namespace OBS.Modules{
         private id: ModuleIdentifier;
 
         abstract dispatch(arg: DispatchArgs): void;
-        
+
+        onConnectionSet(obs: ObsManager): void{};
+        onConnectionRemoved(obs: ObsManager): void{};
         
         constructor(identifier: ModuleIdentifier){
             this.id = identifier;

@@ -6,5 +6,8 @@ namespace OBS.Modules{
 
         /** Use this to handle the responise*/
         dispatch(arg: DispatchArgs): void;
+
+        onConnectionSet(obs: ObsManager): void
+        onConnectionRemoved(obs: ObsManager): void
     }
 }

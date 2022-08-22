@@ -47,6 +47,12 @@
                    <button id="applySceneNameBtn" type="button" class="btn btn-primary col-6 col-sm-4">Apply</button>
                </div>
            </div>
+           <div class="col-6 col-sm-6">
+            <div class="input-group">
+                <input id="filterSceneNameInput" type="text" class="form-control" placeholder="preview scene name" value="red">
+                <input id="filterNameInput" type="text" class="form-control" placeholder="preview scene name" value="3D Transform">
+                <button id="applyFilterBtn" type="button" class="btn btn-primary col-6 col-sm-4">Apply</button>
+            </div>
        </div>
     </div>
 
@@ -56,16 +62,19 @@
         <button id="try" type="button" class="btn btn-primary">Send</button>
     </div>
 
-    <div class="container">
-        <img id="scenePreview" width="auto" height="500">
+    <div class="container overlap-container size-max-content">
+        <img id="scenePreview" class="col-12 overlap-child" width="auto" height="auto"}>
+        <div id="points" class="col-12 overlap-child width-height-100" > 
+        </div>
     </div>
     
 
     <div id="output" class="container" style="margin-top: 10pt;"></div>
 
 
-    <script src="libs/jquery-3.6.0.min.js" type="text/javascript"></script>
-    <script src="libs/bootstrap/bootstrap.min.js" type="text/javascript"></script>
-    <script src="js/util.js" type="text/javascript"></script>
-    <script src="js/ts-generated.js" type="text/javascript"></script>
+    <script src="libs/jquery-3.6.0.min.js"></script>
+    <script src="libs/bootstrap/bootstrap.min.js"></script>
+    <script src="libs/anseki-plain-draggable-ff8df2a/plain-draggable.min.js"></script>
+    <script src="js/util.js"></script>
+    <script src="js/ts-generated.js"></script>
 </body>
