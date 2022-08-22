@@ -1,9 +1,10 @@
 namespace ObsAppModules {
 
 
-    export type PointSet = { topLeft: Point, topRight: Point, bottomLeft: Point, bottomRight: Point, };
-    export type Point = { top: number, left: number };
-    export enum PointLocation {
+    type PointSet = { topLeft: Point, topRight: Point, bottomLeft: Point, bottomRight: Point, };
+    type Point = { top: number, left: number };
+    type Corner = { Y: number, X: number };
+    enum PointLocation {
         topLeft,
         topRight,
         bottomLeft,
@@ -11,15 +12,18 @@ namespace ObsAppModules {
     }
 
     type PointDraggableLocation = { point: Point, jQueryPoint: JQuery<HTMLElement>, draggable: any, location: PointLocation }
-    type FilterIdentifier = { source: string, filter: string }
+    type FilterIdentifier = { sourceName: string, filterName: string }
 
     export class Points extends OBS.Modules.ModuleBase {
 
-        private obsManager: OBS.ObsManager = null;
-        private filter: FilterIdentifier = null;
-        private pointHtmlDivId: string;
         private points: PointDraggableLocation[] = [];
 
+        protected obsManager: OBS.ObsManager = null;
+        protected filter: FilterIdentifier = null;
+        protected pointHtmlDivId: string;
+        protected parentJQuery: JQuery<HTMLElement>;
+
+        protected readonly pointRadius: number = 12;
 
         constructor(moduleIdentifier: OBS.Modules.ModuleIdentifier, pointHtmlDivId: string) {
             super(moduleIdentifier);
@@ -29,13 +33,14 @@ namespace ObsAppModules {
                 throw "ObsAppModules.Points, constructor's pointHtmlDivId parameter should start with \'#\'"
             this.pointHtmlDivId = pointHtmlDivId;
 
+            this.parentJQuery = $(pointHtmlDivId);
         }
 
 
 
 
         public set3DFilter(this: Points, source: string, filter: string) {
-            this.filter = { source: source, filter: filter }
+            this.filter = { sourceName: source, filterName: filter }
 
             this.removePoints();
             this.createAllPoints(source, filter);
@@ -62,12 +67,23 @@ namespace ObsAppModules {
 
         protected onPointDrag(this: Points, pointLocation: PointLocation, newPosition: any): void {
             console.log(newPosition.left, newPosition.top);
-            //throw "not set";
+
+            let corner: Corner = this.calculateCornerPosition(pointLocation, newPosition)
+            let pointId: string = this.getObsPointId(pointLocation);
+
+            let message =  '{ "request-type": "SetSourceFilterSettings", "sourceName": "'
+                                + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
+                                + '", "filterSettings": { "'
+                                + pointId + '.X": ' + corner.X + ', "'
+                                + pointId + '.Y": ' + corner.Y
+                                +' }, "message-id": "ObsAppModules-Points-set-'+ pointId.replace('.', '-') + '-Point" }';
+
+            this.obsManager.sendMessage(message);        
         }
 
         protected async createAllPoints(sourceName: string, filterName: string): Promise<void> {
             let filter: any = await this.getObsFilter(sourceName, filterName);
-            if(filter == null)
+            if (filter == null)
                 return;
 
             let obsPointSet: PointSet = this.getObsAllPoints(filter);
@@ -77,39 +93,6 @@ namespace ObsAppModules {
             this.createPoint(PointLocation.bottomRight, obsPointSet.bottomRight);
             this.createPoint(PointLocation.bottomLeft, obsPointSet.bottomLeft);
         }
-
-
-        // {
-        //     "filters": [
-        //         {
-        //             "enabled": true,
-        //             "name": "3D Transform",
-        //             "settings": {
-        //                 "Camera.FieldOfView": 107.8,
-        //                 "Camera.Mode": 2,
-        //                 "Commit": "g81a96998",
-        //                 "Corners.BottomLeft.X": -39,
-        //                 "Corners.BottomLeft.Y": 50.780000000000001,
-        //                 "Corners.BottomRight.X": 29.02,
-        //                 "Corners.BottomRight.Y": 69.430000000000007,
-        //                 "Corners.TopLeft.X": -56.990000000000002,
-        //                 "Corners.TopLeft.Y": -3.1099999999999999,
-        //                 "Corners.TopRight.X": 63.210000000000001,
-        //                 "Corners.TopRight.Y": -12.44,
-        //                 "Mipmapping": false,
-        //                 "Rotation.X": 9.0999999999999996,
-        //                 "Rotation.Y": 7.0800000000000001,
-        //                 "Version": 47244705792,
-        //                 "enabled": "true"
-        //             },
-        //             "type": "streamfx-filter-transform"
-        //         }
-        //     ],
-        //     "message-id": "id",
-        //     "status": "ok"
-        // }
-
-
 
 
 
@@ -156,7 +139,7 @@ namespace ObsAppModules {
                 this.obsManager.sendMessage(
                     '{ "request-type": "SetSourceFilterSettings", "sourceName": "'
                     + sourceName + '", "filterName": "' + filterName
-                    + '", "filterSettings": { "Camera.Mode": 2 }, "message-id": "id" }');
+                    + '", "filterSettings": { "Camera.Mode": 2 }, "message-id": "ObsAppModules-Points-set-Camera-Mode-2" }');
                 await delay(20)
                 return this.getObsFilter(sourceName, filterName);
             }
@@ -165,24 +148,30 @@ namespace ObsAppModules {
         }
 
         protected getObsAllPoints(this: Points, filter: any): PointSet {
-            let pointRadius = 12;
-            let parent = $(this.pointHtmlDivId);
-            let pw = parent.width();
-            let ph = parent.height();
-            let po = parent.offset();
+            let pw = this.parentJQuery.width();
+            let ph = this.parentJQuery.height();
+            let po = this.parentJQuery.offset();
 
 
-            return {topLeft: this.calculatePointPosition(PointLocation.topLeft, filter, pw, ph, po.left, po.top, pointRadius),
-                    topRight: this.calculatePointPosition(PointLocation.topRight, filter, pw, ph, po.left, po.top, pointRadius),
-                    bottomRight: this.calculatePointPosition(PointLocation.bottomRight, filter, pw, ph, po.left, po.top, pointRadius),
-                    bottomLeft: this.calculatePointPosition(PointLocation.bottomLeft, filter, pw, ph, po.left, po.top, pointRadius)};
+            return {
+                topLeft: this.calculatePointPosition(PointLocation.topLeft, filter, pw, ph, po.left, po.top),
+                topRight: this.calculatePointPosition(PointLocation.topRight, filter, pw, ph, po.left, po.top),
+                bottomRight: this.calculatePointPosition(PointLocation.bottomRight, filter, pw, ph, po.left, po.top),
+                bottomLeft: this.calculatePointPosition(PointLocation.bottomLeft, filter, pw, ph, po.left, po.top)
+            };
         }
 
-        protected calculatePointPosition(this: Points, pointLocation: PointLocation, filter: any, parentWidth: number, parentHeight: number, parentOffsetLeft: number, parentOffsetTop: number, pointRadius: number): Point{
+        protected calculateCornerPosition(this: Points, pointLocation: PointLocation, newPosition: any): Corner {
+            let obsCornerXorLeft = (newPosition.left + this.pointRadius - this.parentJQuery.offset().left) / this.parentJQuery.width() * 200 - 100;
+            let obsCornerYorTop = (newPosition.top + this.pointRadius - this.parentJQuery.offset().top) / this.parentJQuery.height() * 200 - 100;
+            return { X: obsCornerXorLeft, Y: obsCornerYorTop }
+        }
 
-            let testLeftTopL = (filter.settings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - pointRadius;
-            let testLeftTopT = (filter.settings[this.getObsPointId(pointLocation) + ".Y"] + 100) / 200 * parentHeight + parentOffsetTop - pointRadius;
-            return { left: testLeftTopL, top: testLeftTopT };
+        protected calculatePointPosition(this: Points, pointLocation: PointLocation, filter: any, parentWidth: number, parentHeight: number, parentOffsetLeft: number, parentOffsetTop: number): Point {
+
+            let left = (filter.settings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - this.pointRadius;
+            let top = (filter.settings[this.getObsPointId(pointLocation) + ".Y"] + 100) / 200 * parentHeight + parentOffsetTop - this.pointRadius;
+            return { left: left, top: top };
         }
 
         private getCallbackOnDrag(pointLocation: PointLocation): (newPosition: any) => void {
