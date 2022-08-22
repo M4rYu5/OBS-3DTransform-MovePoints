@@ -1,12 +1,15 @@
 
+// from plain-draggable.min.js
+function createPlainDraggable(elementId) {
+	return new PlainDraggable(document.getElementById(elementId))
+}
+
 // from https://stackoverflow.com/a/41797377
 function hexToBase64(hexstring) {
     return btoa(hexstring.match(/\w{2}/g).map(function(a) {
         return String.fromCharCode(parseInt(a, 16));
     }).join(""));
 }
-
-
 
 // sha 256 hash, from https://geraintluff.github.io/sha256/
 function sha256(ascii) {
