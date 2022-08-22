@@ -1,30 +1,14 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var CustomLogger;
 (function (CustomLogger) {
-    var LogType;
+    let LogType;
     (function (LogType) {
         LogType[LogType["none"] = 0] = "none";
         LogType[LogType["info"] = 1] = "info";
         LogType[LogType["wornign"] = 2] = "wornign";
         LogType[LogType["error"] = 3] = "error";
     })(LogType = CustomLogger.LogType || (CustomLogger.LogType = {}));
-    function Log(message, type) {
-        if (type === void 0) { type = LogType.none; }
-        var element = $("<div>");
+    function Log(message, type = LogType.none) {
+        let element = $("<div>");
         element.addClass("log");
         element.addClass("col-12");
         if (message != null) {
@@ -51,165 +35,217 @@ var CustomLogger;
     }
     CustomLogger.Log = Log;
 })(CustomLogger || (CustomLogger = {}));
-var defaultIP = "127.0.0.1";
-var defaultPort = "4444";
-var localStorageIpIdentifier = "localStorrageIpIdentifier";
-var localStoragePortIdentifier = "localStorragePortIdentifier";
-var localStoragePasswordIdentifier = "localStorragePasswordIdentifier";
-var obsManager;
-$(function () {
-    loadSettings();
-    initConnection();
-    initActions();
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+var App;
+(function (App) {
+    var Connection;
+    (function (Connection) {
+        function init() {
+            initConnection();
+        }
+        Connection.init = init;
+        function initConnection() {
+            Connection.obsManager = new OBS.ObsManager();
+            addModules(Connection.obsManager);
+            return Connection.obsManager;
+        }
+        let obsModules;
+        (function (obsModules) {
+        })(obsModules = Connection.obsModules || (Connection.obsModules = {}));
+        function addModules(obsManager) {
+            let previewUpdateModuleId = getModuleIdFromModuleType(ObsAppModules.ModuleType.UpdatePreview);
+            obsModules.previewUpdater = new ObsAppModules.PreviewUpdater(previewUpdateModuleId, $("#scenePreview").get()[0], 100, obsManager);
+            obsManager.addModule(obsModules.previewUpdater);
+            let cornerPointsModuleId = getModuleIdFromModuleType(ObsAppModules.ModuleType.Point3DTransform);
+            obsModules.cornetPoints = new ObsAppModules.Points(cornerPointsModuleId, "#points");
+            obsManager.addModule(obsModules.cornetPoints);
+        }
+        function getModuleIdFromModuleType(moduleType) {
+            return new OBS.Modules.ModuleIdentifier(ObsAppModules.ModuleType[moduleType]);
+        }
+    })(Connection = App.Connection || (App.Connection = {}));
+})(App || (App = {}));
+var App;
+(function (App) {
+    var Defaults;
+    (function (Defaults) {
+        Defaults.defaultIP = "127.0.0.1";
+        Defaults.defaultPort = "4444";
+        Defaults.localStorageIpIdentifier = "localStorrageIpIdentifier";
+        Defaults.localStoragePortIdentifier = "localStorragePortIdentifier";
+        Defaults.localStoragePasswordIdentifier = "localStorragePasswordIdentifier";
+        Defaults.localStorageScenePreviewNameIdentifier = "localStorageScenePreviewNameIdentifier";
+        Defaults.localStorageSceneFilterNameIdentifier = "localStorageSceneFilterNameIdentifier";
+        Defaults.localStorageFilterNameIdentifier = "localStorageFilterNameIdentifier";
+    })(Defaults = App.Defaults || (App.Defaults = {}));
+})(App || (App = {}));
+var App;
+(function (App) {
+    var InputsFillOnLoad;
+    (function (InputsFillOnLoad) {
+        function init() {
+            loadSettings();
+        }
+        InputsFillOnLoad.init = init;
+        function loadSettings() {
+            var ip = localStorage.getItem(App.Defaults.localStorageIpIdentifier);
+            if (ip != null && ip)
+                $("#ipInput").val(ip);
+            var port = localStorage.getItem(App.Defaults.localStoragePortIdentifier);
+            if (port != null)
+                $("#portInput").val(port);
+            var scenePreviewName = localStorage.getItem(App.Defaults.localStorageScenePreviewNameIdentifier);
+            if (scenePreviewName != null)
+                $("#sceneNameInput").val(scenePreviewName);
+            var sceneFilterName = localStorage.getItem(App.Defaults.localStorageSceneFilterNameIdentifier);
+            if (sceneFilterName != null)
+                $("#filterSceneNameInput").val(sceneFilterName);
+            var filterName = localStorage.getItem(App.Defaults.localStorageFilterNameIdentifier);
+            if (filterName != null)
+                $("#filterNameInput").val(filterName);
+        }
+        function saveSettings(ip, port, password) {
+            if (ip != null) {
+                if (ip != App.Defaults.defaultIP)
+                    localStorage.setItem(App.Defaults.localStorageIpIdentifier, ip);
+                else
+                    localStorage.removeItem(App.Defaults.localStorageIpIdentifier);
+            }
+            if (port != null) {
+                if (port != App.Defaults.defaultPort)
+                    localStorage.setItem(App.Defaults.localStoragePortIdentifier, port);
+                else
+                    localStorage.removeItem(App.Defaults.localStoragePortIdentifier);
+            }
+        }
+        InputsFillOnLoad.saveSettings = saveSettings;
+        function saveScenePreviewInput(previewInput) {
+            if (previewInput != null) {
+                if (previewInput != "")
+                    localStorage.setItem(App.Defaults.localStorageScenePreviewNameIdentifier, previewInput);
+                else
+                    localStorage.removeItem(App.Defaults.localStorageScenePreviewNameIdentifier);
+            }
+        }
+        InputsFillOnLoad.saveScenePreviewInput = saveScenePreviewInput;
+        function saveSceneAndFilterNameInput(sceneFilterInput, filterNameInput) {
+            if (sceneFilterInput != null) {
+                if (sceneFilterInput != "")
+                    localStorage.setItem(App.Defaults.localStorageSceneFilterNameIdentifier, sceneFilterInput);
+                else
+                    localStorage.removeItem(App.Defaults.localStorageSceneFilterNameIdentifier);
+            }
+            if (filterNameInput != null) {
+                if (filterNameInput != "")
+                    localStorage.setItem(App.Defaults.localStorageFilterNameIdentifier, filterNameInput);
+                else
+                    localStorage.removeItem(App.Defaults.localStorageFilterNameIdentifier);
+            }
+        }
+        InputsFillOnLoad.saveSceneAndFilterNameInput = saveSceneAndFilterNameInput;
+    })(InputsFillOnLoad = App.InputsFillOnLoad || (App.InputsFillOnLoad = {}));
+})(App || (App = {}));
+$(() => {
+    App.InputsFillOnLoad.init();
+    App.Connection.init();
+    App.MainPageActions.init();
 });
-function initActions() {
-    $("#connect").on("click", function () {
-        var ip = $("#ipInput").val().toString();
-        if (ip == "")
-            ip = defaultIP;
-        var port = $("#portInput").val().toString();
-        if (port == "")
-            port = defaultPort;
-        var password = $("#passwordInput").val().toString();
-        saveSettings(ip, port, password);
-        obsManager.connect(ip, port, password);
-    });
-    $("#applySceneNameBtn").on("click", function () {
-        var sceneName = $("#sceneNameInput").val().toString();
-        obsModules.backgroundUpdater.setSourceName(sceneName);
-    });
-    $('#try').on("click", function () {
-        obsManager.sendMessage($("#rawMessageInput").val().toString());
-    });
-}
-function initConnection() {
-    obsManager = new OBS.ObsManager();
-    obsManager.setConnectionResultCallback(func.connected);
-    obsManager.setDisconnectedCallback(func.disconneted);
-    addModules(obsManager);
-    return obsManager;
-}
-var obsModules;
-(function (obsModules) {
-})(obsModules || (obsModules = {}));
-function addModules(obsManager) {
-    obsModules.backgroundUpdater = new ObsAppModules.UpdatePreview($("#scenePreview").get()[0], 100, obsManager);
-    obsManager.addModule(obsModules.backgroundUpdater);
-}
-function loadSettings() {
-    var ip = localStorage.getItem(localStorageIpIdentifier);
-    if (ip != null && ip)
-        $("#ipInput").val(ip);
-    var port = localStorage.getItem(localStoragePortIdentifier);
-    if (port != null)
-        $("#portInput").val(port);
-}
-function saveSettings(ip, port, password) {
-    if (ip != null) {
-        if (ip != defaultIP)
-            localStorage.setItem(localStorageIpIdentifier, ip);
-        else
-            localStorage.removeItem(localStorageIpIdentifier);
-    }
-    if (port != null) {
-        if (port != defaultPort)
-            localStorage.setItem(localStoragePortIdentifier, port);
-        else
-            localStorage.removeItem(localStoragePortIdentifier);
-    }
-}
-var func;
-(function (func) {
-    function connected(connection) {
-        console.log("FFFF: connected: " + connection);
-    }
-    func.connected = connected;
-    function disconneted() {
-        console.log("FFFF: disconnected");
-    }
-    func.disconneted = disconneted;
-})(func || (func = {}));
+var App;
+(function (App) {
+    var MainPageActions;
+    (function (MainPageActions) {
+        function init() {
+            initActions();
+        }
+        MainPageActions.init = init;
+        function initActions() {
+            $("#connect").on("click", () => {
+                tryConnect();
+            });
+            $("#passwordInput").on("keydown", (e) => {
+                if (e.key == 'Enter') {
+                    $("#passwordInput").trigger("blur");
+                    tryConnect();
+                }
+            });
+            $("#applySceneNameBtn").on("click", () => {
+                let sceneName = $("#sceneNameInput").val().toString();
+                App.InputsFillOnLoad.saveScenePreviewInput(sceneName);
+                App.Connection.obsModules.previewUpdater.setSourceName(sceneName);
+            });
+            $('#try').on("click", () => {
+                App.Connection.obsManager.sendMessage($("#rawMessageInput").val().toString());
+            });
+            $("#applyFilterBtn").on("click", () => {
+                let scene = $("#filterSceneNameInput").val().toString();
+                let filter = $("#filterNameInput").val().toString();
+                App.InputsFillOnLoad.saveSceneAndFilterNameInput(scene, filter);
+                App.Connection.obsModules.cornetPoints.set3DFilter(scene, filter);
+            });
+            function tryConnect() {
+                let ip = $("#ipInput").val().toString();
+                if (ip == "")
+                    ip = App.Defaults.defaultIP;
+                let port = $("#portInput").val().toString();
+                if (port == "")
+                    port = App.Defaults.defaultPort;
+                let password = $("#passwordInput").val().toString();
+                App.InputsFillOnLoad.saveSettings(ip, port, password);
+                App.Connection.obsManager.connect(ip, port, password);
+            }
+        }
+    })(MainPageActions = App.MainPageActions || (App.MainPageActions = {}));
+})(App || (App = {}));
 var OBS;
 (function (OBS) {
-    var ConnectionResult;
+    let ConnectionResult;
     (function (ConnectionResult) {
         ConnectionResult[ConnectionResult["succeed"] = 0] = "succeed";
         ConnectionResult[ConnectionResult["socketAddressUnreachable"] = 1] = "socketAddressUnreachable";
         ConnectionResult[ConnectionResult["wrongAuthDetails"] = 2] = "wrongAuthDetails";
         ConnectionResult[ConnectionResult["socketConnectionError"] = 3] = "socketConnectionError";
     })(ConnectionResult = OBS.ConnectionResult || (OBS.ConnectionResult = {}));
-    var ObsConnection = (function () {
-        function ObsConnection() {
-            var _this = this;
-            this.password = null;
-            this.tryedToConnect = false;
-            this.checkAuthMessageIdentifier = "MessageIdentifier-CheckAuthRequired";
-            this.tryAuthMessageIdentifier = "MessageIdentifier-TryAuth";
-            this.webSocket = null;
-            this.connectionResultCallback = null;
-            this.disconnectedCallback = null;
-            this.messageReceivedCallback = null;
-            this.socketOnOpen = function (event) {
-                CustomLogger.Log("[OPEN] Connection established");
-                _this.webSocket.send('{"request-type": "GetAuthRequired", "message-id": "' + _this.checkAuthMessageIdentifier + '"}');
-            };
-            this.socketOnMessage = function (event) {
-                if (_this.tryedToConnect == false) {
-                    CustomLogger.Log("[RECEIVED auth]: " + event.data);
-                    _this.resolveAuth(event.data);
-                }
-                else {
-                    CustomLogger.Log("[RECEIVED external]: " + event.data);
-                    _this.onMessageReceived(event.data);
-                }
-            };
-            this.socketOnClose = function (event) {
-                if (event.wasClean) {
-                    CustomLogger.Log("[close] Connection closed cleanly, code=".concat(event.code, " reason=").concat(event.reason));
-                }
-                else {
-                    CustomLogger.Log('[close] Connection died');
-                }
-                _this.resetSocket();
-                _this.onDisconnected();
-            };
-            this.socketOnError = function (error) {
-                CustomLogger.Log("[error] ".concat(JSON.stringify(error)));
-            };
-        }
-        ObsConnection.prototype.setConnectionResultCallback = function (onConnectionResult) {
+    class ObsConnection {
+        password = null;
+        tryedToConnect = false;
+        checkAuthMessageIdentifier = "MessageIdentifier-CheckAuthRequired";
+        tryAuthMessageIdentifier = "MessageIdentifier-TryAuth";
+        webSocket = null;
+        connectionResultCallback = null;
+        disconnectedCallback = null;
+        messageReceivedCallback = null;
+        setConnectionResultCallback(onConnectionResult) {
             this.connectionResultCallback = onConnectionResult;
-        };
-        ObsConnection.prototype.setDisconnectedCallback = function (onDisconnected) {
+        }
+        setDisconnectedCallback(onDisconnected) {
             this.disconnectedCallback = onDisconnected;
-        };
-        ObsConnection.prototype.setMessageReceivedCallback = function (onMessageReceived) {
+        }
+        setMessageReceivedCallback(onMessageReceived) {
             this.messageReceivedCallback = onMessageReceived;
-        };
-        ObsConnection.prototype.sendMessage = function (jsonMessage) {
+        }
+        sendMessage(jsonMessage) {
             if (!this.isConnected())
                 return false;
             try {
                 this.webSocket.send(jsonMessage);
             }
-            catch (_a) {
+            catch {
                 return false;
             }
             return true;
-        };
-        ObsConnection.prototype.isConnected = function () {
+        }
+        isConnected() {
             return this.webSocket != null;
-        };
-        ObsConnection.prototype.connect = function (ip, port, password) {
-            if (ip === void 0) { ip = "127.0.0.1"; }
-            if (port === void 0) { port = "4444"; }
-            if (password === void 0) { password = ""; }
+        }
+        connect(ip = "127.0.0.1", port = "4444", password = "") {
             if (this.isConnected())
                 this.resetSocket();
             try {
-                this.webSocket = new WebSocket("ws://".concat(ip, ":").concat(port));
+                this.webSocket = new WebSocket(`ws://${ip}:${port}`);
             }
-            catch (_a) {
+            catch {
                 this.setObsConnectionResult(ConnectionResult.socketAddressUnreachable);
                 this.webSocket = null;
                 return;
@@ -219,14 +255,14 @@ var OBS;
             this.webSocket.onclose = this.socketOnClose;
             this.webSocket.onerror = this.socketOnError;
             this.password = password;
-        };
-        ObsConnection.prototype.disconnect = function () {
+        }
+        disconnect() {
             this.password = null;
             if (this.isConnected())
                 this.webSocket.close();
             this.resetSocket();
-        };
-        ObsConnection.prototype.resetSocket = function () {
+        }
+        resetSocket() {
             CustomLogger.Log("[socket reset]", CustomLogger.LogType.info);
             this.password = null;
             if (this.webSocket == null)
@@ -238,14 +274,40 @@ var OBS;
             this.webSocket.close();
             this.webSocket = null;
             this.tryedToConnect = false;
-        };
-        ObsConnection.prototype.setObsConnectionResult = function (connection) {
+        }
+        setObsConnectionResult(connection) {
             this.tryedToConnect = true;
             this.onConnectResult(connection);
             CustomLogger.Log("[connectionResult]: " + ConnectionResult[connection], CustomLogger.LogType.info);
+        }
+        socketOnOpen = (event) => {
+            CustomLogger.Log("[OPEN] Connection established");
+            this.webSocket.send('{"request-type": "GetAuthRequired", "message-id": "' + this.checkAuthMessageIdentifier + '"}');
         };
-        ObsConnection.prototype.resolveAuth = function (obj) {
-            var data = JSON.parse(obj);
+        socketOnMessage = (event) => {
+            if (this.tryedToConnect == false) {
+                CustomLogger.Log("[RECEIVED auth]: " + event.data);
+                this.resolveAuth(event.data);
+            }
+            else {
+                this.onMessageReceived(event.data);
+            }
+        };
+        socketOnClose = (event) => {
+            if (event.wasClean) {
+                CustomLogger.Log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+            }
+            else {
+                CustomLogger.Log('[close] Connection died');
+            }
+            this.resetSocket();
+            this.onDisconnected();
+        };
+        socketOnError = (error) => {
+            CustomLogger.Log(`[error] ${JSON.stringify(error)}`);
+        };
+        resolveAuth(obj) {
+            let data = JSON.parse(obj);
             if (data["message-id"] == this.checkAuthMessageIdentifier) {
                 if (data.authRequired) {
                     this.auth(data.challenge, data.salt);
@@ -265,100 +327,142 @@ var OBS;
                     }
                 }
             }
-        };
-        ObsConnection.prototype.auth = function (challenge, salt) {
-            var password = this.password;
+        }
+        auth(challenge, salt) {
+            let password = this.password;
             this.password = null;
-            var sha = sha256(password + salt);
-            var shaPchallenge = hexToBase64(sha) + challenge;
-            var sha2 = sha256(shaPchallenge);
-            var authToken = hexToBase64(sha2);
-            var temp = {
+            let sha = sha256(password + salt);
+            let shaPchallenge = hexToBase64(sha) + challenge;
+            let sha2 = sha256(shaPchallenge);
+            let authToken = hexToBase64(sha2);
+            let temp = {
                 "request-type": "Authenticate",
                 "auth": authToken,
                 "message-id": this.tryAuthMessageIdentifier
             };
             CustomLogger.Log('[Sending Auth Token]', CustomLogger.LogType.info);
-            var token = JSON.stringify(temp);
+            let token = JSON.stringify(temp);
             this.webSocket.send(token);
-        };
-        ObsConnection.prototype.onConnectResult = function (connection) {
-            var _a;
-            (_a = this.connectionResultCallback) === null || _a === void 0 ? void 0 : _a.call(this, connection);
-        };
+        }
+        onConnectResult(connection) {
+            this.connectionResultCallback?.call(this, connection);
+        }
         ;
-        ObsConnection.prototype.onDisconnected = function () {
-            var _a;
-            (_a = this.disconnectedCallback) === null || _a === void 0 ? void 0 : _a.call(this);
-        };
+        onDisconnected() {
+            this.disconnectedCallback?.call(this);
+        }
         ;
-        ObsConnection.prototype.onMessageReceived = function (jsonMessage) {
-            var _a;
-            (_a = this.messageReceivedCallback) === null || _a === void 0 ? void 0 : _a.call(this, jsonMessage);
-        };
+        onMessageReceived(jsonMessage) {
+            this.messageReceivedCallback?.call(this, jsonMessage);
+        }
         ;
-        return ObsConnection;
-    }());
+    }
     OBS.ObsConnection = ObsConnection;
 })(OBS || (OBS = {}));
 var OBS;
 (function (OBS) {
-    var ObsManager = (function (_super) {
-        __extends(ObsManager, _super);
-        function ObsManager() {
-            var _this = _super !== null && _super.apply(this, arguments) || this;
-            _this.modules = {};
-            return _this;
-        }
-        ObsManager.prototype.onMessageReceived = function (jsonMessage) {
-            _super.prototype.onMessageReceived.call(this, jsonMessage);
+    let Status;
+    (function (Status) {
+        Status["ok"] = "ok";
+        Status["error"] = "error";
+    })(Status = OBS.Status || (OBS.Status = {}));
+    class ObsManager extends OBS.ObsConnection {
+        MessageUnhandledCallback;
+        onMessageReceived(jsonMessage) {
+            super.onMessageReceived(jsonMessage);
             this.messageReceivedHandler(jsonMessage);
-        };
+        }
         ;
-        ObsManager.prototype.messageReceivedHandler = function (message) {
-            var obj = null;
+        messageReceivedHandler(message) {
+            let obj = null;
             try {
                 obj = JSON.parse(message);
             }
-            catch (_a) { }
+            catch { }
             if (obj == null) {
                 CustomLogger.Log("[ObsManager]: empty message received", CustomLogger.LogType.wornign);
                 return;
             }
             if (!this.handleMessage(obj)) {
+                CustomLogger.Log("[ObsManager]: message unhandled: " + message, CustomLogger.LogType.info);
                 this.onMessageUnhandled(message);
             }
-            else {
-                CustomLogger.Log("[ObsManager]: message unhandled: " + message, CustomLogger.LogType.info);
-            }
-        };
-        ObsManager.prototype.onMessageUnhandled = function (message) {
-            var _a;
-            (_a = this.MessageUnhandledCallback) === null || _a === void 0 ? void 0 : _a.call(this, message);
-        };
-        ObsManager.prototype.setUnhandledMessageCallback = function (onUnhandledMessage) {
+        }
+        handleMessage(obj) {
+            return this.handleModule(obj) || this.handleAsync(obj);
+        }
+        onMessageUnhandled(message) {
+            this.MessageUnhandledCallback?.call(this, message);
+        }
+        setUnhandledMessageCallback(onUnhandledMessage) {
             this.MessageUnhandledCallback = onUnhandledMessage;
+        }
+        unresolvedPromises = {};
+        asyncCallsId = 0;
+        asyncTimeoutMillieseconds = 1000;
+        asyncMessageIdPrefix = "AsyncMessage with unique id: ";
+        sendMessageAsync(objToSend) {
+            if (!this.isConnected())
+                return Promise.reject({ status: Status.error, message: "You're not connected to OBS", responseObj: null });
+            let asyncKey = this.asyncMessageIdPrefix + this.asyncCallsId;
+            if (this.asyncCallsId == Number.MAX_SAFE_INTEGER)
+                this.asyncCallsId = Number.MIN_SAFE_INTEGER;
+            else
+                this.asyncCallsId++;
+            let copy = { ...objToSend };
+            copy["message-id"] = asyncKey;
+            let promise = new Promise((resolve, reject) => {
+                this.unresolvedPromises[asyncKey] = { promise: null, resolve: resolve, reject: reject };
+            });
+            this.unresolvedPromises[asyncKey].promise = promise;
+            setInterval(this.timeoutFunc, this.asyncTimeoutMillieseconds, asyncKey);
+            this.sendMessage(JSON.stringify(copy));
+            return promise;
+        }
+        timeoutFunc = (asyncKey) => {
+            if (!(asyncKey in this.unresolvedPromises))
+                return;
+            let localRejectFunc = this.unresolvedPromises[asyncKey].reject;
+            delete this.unresolvedPromises[asyncKey];
+            localRejectFunc({ status: Status.error, message: "Timeout", responseObj: null });
         };
-        ObsManager.prototype.addModule = function (module) {
+        handleAsync(obj) {
+            var messageId = obj["message-id"];
+            if (messageId == null)
+                return false;
+            if (!messageId.startsWith(this.asyncMessageIdPrefix))
+                return false;
+            if (messageId in this.unresolvedPromises) {
+                let localResolveFunc = this.unresolvedPromises[messageId].resolve;
+                delete this.unresolvedPromises[messageId];
+                localResolveFunc({ status: Status.ok, message: "", responseObj: obj });
+                return true;
+            }
+            return false;
+        }
+        modules = {};
+        addModule(module) {
             if (this.hasModule(module))
                 throw "Module already added";
             this.modules[module.getIdentifier().getId()] = module;
-        };
-        ObsManager.prototype.removeModule = function (module) {
+            module.onConnectionSet(this);
+        }
+        removeModule(module) {
             this.removeModuleById(module.getIdentifier().getId());
-        };
-        ObsManager.prototype.removeModuleById = function (moduleId) {
+        }
+        removeModuleById(moduleId) {
             if (!this.hasModuleId(moduleId))
                 return;
+            this.modules[moduleId].onConnectionRemoved(this);
             delete this.modules[moduleId];
-        };
-        ObsManager.prototype.hasModule = function (module) {
+        }
+        hasModule(module) {
             return this.hasModuleId(module.getIdentifier().getId());
-        };
-        ObsManager.prototype.hasModuleId = function (moduleId) {
+        }
+        hasModuleId(moduleId) {
             return moduleId in this.modules;
-        };
-        ObsManager.prototype.handleMessage = function (obj) {
+        }
+        handleModule(obj) {
             var moduleId = obj["message-id"];
             if (!this.hasModuleId(moduleId))
                 return false;
@@ -368,22 +472,22 @@ var OBS;
             arg.connection = this;
             module.dispatch(arg);
             return true;
-        };
-        return ObsManager;
-    }(OBS.ObsConnection));
+        }
+    }
     OBS.ObsManager = ObsManager;
 })(OBS || (OBS = {}));
 var OBS;
 (function (OBS) {
     var Modules;
     (function (Modules) {
-        var DispatchArgs = (function () {
-            function DispatchArgs(obj, connection) {
+        class DispatchArgs {
+            obj;
+            connection;
+            constructor(obj, connection) {
                 this.obj = obj;
                 this.connection = connection;
             }
-            return DispatchArgs;
-        }());
+        }
         Modules.DispatchArgs = DispatchArgs;
     })(Modules = OBS.Modules || (OBS.Modules = {}));
 })(OBS || (OBS = {}));
@@ -391,18 +495,22 @@ var OBS;
 (function (OBS) {
     var Modules;
     (function (Modules) {
-        var ModuleBase = (function () {
-            function ModuleBase(identifier) {
+        class ModuleBase {
+            id;
+            onConnectionSet(obs) { }
+            ;
+            onConnectionRemoved(obs) { }
+            ;
+            constructor(identifier) {
                 this.id = identifier;
             }
-            ModuleBase.prototype.getIdentifier = function () {
+            getIdentifier() {
                 return this.id;
-            };
-            ModuleBase.prototype.setIdentifierToObject = function (object) {
+            }
+            setIdentifierToObject(object) {
                 object["message-id"] = this.getIdentifier().getId();
-            };
-            return ModuleBase;
-        }());
+            }
+        }
         Modules.ModuleBase = ModuleBase;
     })(Modules = OBS.Modules || (OBS.Modules = {}));
 })(OBS || (OBS = {}));
@@ -410,70 +518,238 @@ var OBS;
 (function (OBS) {
     var Modules;
     (function (Modules) {
-        var ModuleIdentifier = (function () {
-            function ModuleIdentifier(identifier) {
-                if (identifier === void 0) { identifier = null; }
-                this.reservedCharacter = "◙";
+        class ModuleIdentifier {
+            reservedCharacter = "◙";
+            identifier;
+            constructor(identifier = null) {
                 this.identifier = identifier;
                 if (this.identifier.indexOf(this.getReservedChar()) != -1)
                     throw "ModuleIdentifier: ◙ (or Alt + 10 or the 10'th character in asci table) is reserved";
             }
-            ModuleIdentifier.prototype.getId = function () {
+            getId() {
                 return this.identifier;
-            };
-            ModuleIdentifier.prototype.getReservedChar = function () {
+            }
+            getReservedChar() {
                 return this.reservedCharacter;
-            };
-            return ModuleIdentifier;
-        }());
+            }
+        }
         Modules.ModuleIdentifier = ModuleIdentifier;
     })(Modules = OBS.Modules || (OBS.Modules = {}));
 })(OBS || (OBS = {}));
 var ObsAppModules;
 (function (ObsAppModules) {
-    var ModuleType;
+    let ModuleType;
     (function (ModuleType) {
         ModuleType[ModuleType["UpdatePreview"] = 0] = "UpdatePreview";
+        ModuleType[ModuleType["Point3DTransform"] = 1] = "Point3DTransform";
     })(ModuleType = ObsAppModules.ModuleType || (ObsAppModules.ModuleType = {}));
 })(ObsAppModules || (ObsAppModules = {}));
 var ObsAppModules;
 (function (ObsAppModules) {
-    var UpdatePreview = (function (_super) {
-        __extends(UpdatePreview, _super);
-        function UpdatePreview(backgroundImage, updateInterval, connection, sourceName) {
-            var _this = _super.call(this, new OBS.Modules.ModuleIdentifier(ObsAppModules.ModuleType[ObsAppModules.ModuleType.UpdatePreview])) || this;
-            _this.requestMessage = {
-                "request-type": "TakeSourceScreenshot",
-                "embedPictureFormat": "jpg"
-            };
-            _this.backgroundImage = backgroundImage;
-            _this.connection = connection;
-            if (sourceName != null)
-                _this.requestMessage["sourceName"] = sourceName;
-            _this.setIdentifierToObject(_this.requestMessage);
-            setInterval(function () { return _this.updateBackground(); }, updateInterval);
-            return _this;
+    let PointLocation;
+    (function (PointLocation) {
+        PointLocation[PointLocation["topLeft"] = 0] = "topLeft";
+        PointLocation[PointLocation["topRight"] = 1] = "topRight";
+        PointLocation[PointLocation["bottomLeft"] = 2] = "bottomLeft";
+        PointLocation[PointLocation["bottomRight"] = 3] = "bottomRight";
+    })(PointLocation || (PointLocation = {}));
+    class Points extends OBS.Modules.ModuleBase {
+        points = [];
+        obsManager = null;
+        filter = null;
+        pointHtmlDivId;
+        parentJQuery;
+        pointRadius = 12;
+        constructor(moduleIdentifier, pointHtmlDivId) {
+            super(moduleIdentifier);
+            if (pointHtmlDivId == null)
+                throw "ObsAppModules.Points, constructor's pointHtmlDivId parameter should be set";
+            if (!pointHtmlDivId.startsWith('#'))
+                throw "ObsAppModules.Points, constructor's pointHtmlDivId parameter should start with \'#\'";
+            this.pointHtmlDivId = pointHtmlDivId;
+            this.parentJQuery = $(pointHtmlDivId);
+            $(window).on('resize', () => {
+                if (this.filter != null)
+                    this.set3DFilter(this.filter.sourceName, this.filter.filterName);
+            });
         }
-        UpdatePreview.prototype.updateBackground = function () {
+        set3DFilter(source, filter) {
+            this.filter = { sourceName: source, filterName: filter };
+            this.removeAllPoints();
+            this.createAllPoints(source, filter);
+        }
+        onConnectionSet(obs) {
+            if (this.obsManager != null)
+                throw "OBS_3D_Points: cannot support multiple connections";
+            this.obsManager = obs;
+        }
+        onConnectionRemoved(obs) {
+            this.obsManager = null;
+        }
+        dispatch(arg) {
+        }
+        onPointDrag(pointLocation, newPosition) {
+            console.log(newPosition.left, newPosition.top);
+            let corner = this.calculateCornerPosition(pointLocation, newPosition);
+            let pointId = this.getObsPointId(pointLocation);
+            let message = '{ "request-type": "SetSourceFilterSettings", "sourceName": "'
+                + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
+                + '", "filterSettings": { "'
+                + pointId + '.X": ' + corner.X + ', "'
+                + pointId + '.Y": ' + corner.Y
+                + ' }, "message-id": "' + this.getIdentifier().getId() + '" }';
+            this.obsManager.sendMessage(message);
+        }
+        async createAllPoints(sourceName, filterName) {
+            let filter = await this.getObsFilter(sourceName, filterName);
+            if (filter == null)
+                return;
+            let obsPointSet = this.getObsAllPointsPositions(filter);
+            this.createPoint(PointLocation.topLeft, obsPointSet.topLeft);
+            this.createPoint(PointLocation.topRight, obsPointSet.topRight);
+            this.createPoint(PointLocation.bottomRight, obsPointSet.bottomRight);
+            this.createPoint(PointLocation.bottomLeft, obsPointSet.bottomLeft);
+        }
+        removeAllPoints() {
+            this.points.forEach((value, index) => {
+                value.jQueryPoint.remove();
+            });
+            this.points.length = 0;
+        }
+        createPoint(pointLocation, position) {
+            let point = $("<div>");
+            point.addClass("dot");
+            point.attr("id", this.getPointId(pointLocation));
+            $(this.pointHtmlDivId).append(point);
+            let draggable = createPlainDraggable(point.attr("id"));
+            draggable.containment = { left: 0, top: 0, width: '100%', height: '100%' };
+            draggable.left = position.left;
+            draggable.top = position.top;
+            draggable.onDrag = this.getCallbackOnDrag(pointLocation);
+            this.points.push({ point: position, jQueryPoint: point, draggable: draggable, location: pointLocation });
+        }
+        async getObsFilter(sourceName, filterName) {
+            let filter;
+            let obj = await this.obsManager.sendMessageAsync({ "request-type": "GetSourceFilters", "sourceName": sourceName });
+            let filters = obj.responseObj.filters;
+            filters.forEach((value, index) => {
+                if (value.type == "streamfx-filter-transform" && value.name == filterName)
+                    filter = value;
+            });
+            if (filter == null)
+                return null;
+            let test = filter.settings["Camera.Mode"];
+            if (test != 2) {
+                this.obsManager.sendMessage('{ "request-type": "SetSourceFilterSettings", "sourceName": "'
+                    + sourceName + '", "filterName": "' + filterName
+                    + '", "filterSettings": { "Camera.Mode": 2 }, "message-id": "ObsAppModules-Points-set-Camera-Mode-2" }');
+                await delay(20);
+                return this.getObsFilter(sourceName, filterName);
+            }
+            return filter;
+        }
+        getObsAllPointsPositions(filter) {
+            let pw = this.parentJQuery.width();
+            let ph = this.parentJQuery.height();
+            let po = this.parentJQuery.offset();
+            return {
+                topLeft: this.calculatePointPosition(PointLocation.topLeft, filter, pw, ph, po.left, po.top),
+                topRight: this.calculatePointPosition(PointLocation.topRight, filter, pw, ph, po.left, po.top),
+                bottomRight: this.calculatePointPosition(PointLocation.bottomRight, filter, pw, ph, po.left, po.top),
+                bottomLeft: this.calculatePointPosition(PointLocation.bottomLeft, filter, pw, ph, po.left, po.top)
+            };
+        }
+        calculateCornerPosition(pointLocation, newPosition) {
+            let obsCornerXorLeft = (newPosition.left + this.pointRadius - this.parentJQuery.offset().left) / this.parentJQuery.width() * 200 - 100;
+            let obsCornerYorTop = (newPosition.top + this.pointRadius - this.parentJQuery.offset().top) / this.parentJQuery.height() * 200 - 100;
+            return { X: obsCornerXorLeft, Y: obsCornerYorTop };
+        }
+        calculatePointPosition(pointLocation, filter, parentWidth, parentHeight, parentOffsetLeft, parentOffsetTop) {
+            let left = (filter.settings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - this.pointRadius;
+            let top = (filter.settings[this.getObsPointId(pointLocation) + ".Y"] + 100) / 200 * parentHeight + parentOffsetTop - this.pointRadius;
+            return { left: left, top: top };
+        }
+        getCallbackOnDrag(pointLocation) {
+            switch (pointLocation) {
+                case PointLocation.topLeft: return (newPosition) => this.onPointDrag(PointLocation.topLeft, newPosition);
+                case PointLocation.topRight: return (newPosition) => this.onPointDrag(PointLocation.topRight, newPosition);
+                case PointLocation.bottomRight: return (newPosition) => this.onPointDrag(PointLocation.bottomRight, newPosition);
+                case PointLocation.bottomLeft: return (newPosition) => this.onPointDrag(PointLocation.bottomLeft, newPosition);
+            }
+        }
+        getPointId(pointLocation) {
+            switch (pointLocation) {
+                case PointLocation.topLeft: return "topLeftPoint";
+                case PointLocation.topRight: return "topRightPoint";
+                case PointLocation.bottomRight: return "bottomRightPoint";
+                case PointLocation.bottomLeft: return "bottomLeftPoint";
+            }
+        }
+        getObsPointId(pointLocation) {
+            switch (pointLocation) {
+                case PointLocation.topLeft: return "Corners.TopLeft";
+                case PointLocation.topRight: return "Corners.TopRight";
+                case PointLocation.bottomRight: return "Corners.BottomRight";
+                case PointLocation.bottomLeft: return "Corners.BottomLeft";
+            }
+        }
+    }
+    ObsAppModules.Points = Points;
+})(ObsAppModules || (ObsAppModules = {}));
+var ObsAppModules;
+(function (ObsAppModules) {
+    class PreviewUpdater extends OBS.Modules.ModuleBase {
+        requestMessage = {
+            "request-type": "TakeSourceScreenshot",
+            "embedPictureFormat": "jpg"
+        };
+        timer;
+        backgroundImage;
+        connection;
+        updateInterval;
+        constructor(identifier, backgroundImage, updateInterval, connection, sourceName, startOnCreate = true) {
+            super(identifier);
+            this.backgroundImage = backgroundImage;
+            this.connection = connection;
+            if (sourceName != null)
+                this.requestMessage["sourceName"] = sourceName;
+            this.setIdentifierToObject(this.requestMessage);
+            this.updateInterval = updateInterval;
+            if (startOnCreate)
+                this.start();
+        }
+        start() {
+            if (!this.isRunning())
+                this.timer = setInterval(() => this.updateBackground(), this.updateInterval);
+        }
+        stop() {
+            if (this.isRunning()) {
+                clearInterval(this.timer);
+                this.timer = null;
+            }
+        }
+        isRunning() {
+            return this.timer != null;
+        }
+        updateBackground() {
             if (this.connection.isConnected()) {
                 var message = JSON.stringify(this.requestMessage);
                 this.connection.sendMessage(message);
             }
-        };
-        UpdatePreview.prototype.setSourceName = function (sourceName) {
+        }
+        setSourceName(sourceName) {
             if (sourceName != null && sourceName.length != 0)
                 this.requestMessage["sourceName"] = sourceName;
             else
                 this.removeSourceName();
-        };
-        UpdatePreview.prototype.removeSourceName = function () {
+        }
+        removeSourceName() {
             delete this.requestMessage["sourceName"];
-        };
-        UpdatePreview.prototype.dispatch = function (arg) {
+        }
+        dispatch(arg) {
             this.backgroundImage.src = arg.obj["img"];
-        };
-        return UpdatePreview;
-    }(OBS.Modules.ModuleBase));
-    ObsAppModules.UpdatePreview = UpdatePreview;
+        }
+    }
+    ObsAppModules.PreviewUpdater = PreviewUpdater;
 })(ObsAppModules || (ObsAppModules = {}));
 //# sourceMappingURL=ts-generated.js.map
