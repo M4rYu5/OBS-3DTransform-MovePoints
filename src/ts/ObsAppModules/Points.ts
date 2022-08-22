@@ -37,6 +37,12 @@ namespace ObsAppModules {
             this.pointHtmlDivId = pointHtmlDivId;
 
             this.parentJQuery = $(pointHtmlDivId);
+
+            // handle the windows resize
+            $(window).on('resize', ()=>{
+                if(this.filter != null)
+                    this.set3DFilter(this.filter.sourceName, this.filter.filterName);
+            });
         }
 
 
