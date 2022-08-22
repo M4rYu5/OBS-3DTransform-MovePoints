@@ -21,6 +21,7 @@ namespace App.MainPageActions {
     
         $("#applySceneNameBtn").on("click", () => {
             let sceneName: string = $("#sceneNameInput").val().toString();
+            App.InputsFillOnLoad.saveScenePreviewInput(sceneName);
             App.Connection.obsModules.previewUpdater.setSourceName(sceneName);
         });
     
@@ -33,6 +34,7 @@ namespace App.MainPageActions {
         $("#applyFilterBtn").on("click", () => {
             let scene = $("#filterSceneNameInput").val().toString();
             let filter = $("#filterNameInput").val().toString();
+            App.InputsFillOnLoad.saveSceneAndFilterNameInput(scene, filter);
             App.Connection.obsModules.cornetPoints.set3DFilter(scene, filter);
         })
     

@@ -7,5 +7,10 @@ namespace App.Defaults {
         export let localStorageIpIdentifier: string = "localStorrageIpIdentifier";
         export let localStoragePortIdentifier: string = "localStorragePortIdentifier";
         export let localStoragePasswordIdentifier: string = "localStorragePasswordIdentifier";
-    
+ 
+        // scene & filter selection inputs
+        export let localStorageScenePreviewNameIdentifier: string = "localStorageScenePreviewNameIdentifier";
+        export let localStorageSceneFilterNameIdentifier: string = "localStorageSceneFilterNameIdentifier";
+        export let localStorageFilterNameIdentifier: string = "localStorageFilterNameIdentifier";
+
 }
