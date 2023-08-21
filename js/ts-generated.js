@@ -170,10 +170,12 @@ var App;
                     tryConnect();
                 }
             });
-            $("#applySceneNameBtn").on("click", () => {
-                let sceneName = $("#sceneNameInput").val().toString();
-                App.InputsFillOnLoad.saveScenePreviewInput(sceneName);
-                App.Connection.obsModules.previewUpdater.setSourceName(sceneName);
+            $("#applySceneNameBtn").on("click", async () => {
+                let sourceName = $("#sceneNameInput").val().toString();
+                App.InputsFillOnLoad.saveScenePreviewInput(sourceName);
+                App.Connection.obsModules.previewUpdater.setSourceName(sourceName);
+                await delay(100);
+                await App.Connection.obsModules.cornetPoints.previewChaged(sourceName);
             });
             $('#try').on("click", () => {
                 App.Connection.obsManager.sendMessage($("#rawMessageInput").val().toString());
@@ -181,8 +183,9 @@ var App;
             $("#applyFilterBtn").on("click", () => {
                 let scene = $("#filterSceneNameInput").val().toString();
                 let filter = $("#filterNameInput").val().toString();
+                let previewSourceName = $("#sceneNameInput").val().toString();
                 App.InputsFillOnLoad.saveSceneAndFilterNameInput(scene, filter);
-                App.Connection.obsModules.cornetPoints.set3DFilter(scene, filter);
+                App.Connection.obsModules.cornetPoints.set3DFilter(scene, filter, previewSourceName);
             });
             function tryConnect() {
                 let ip = $("#ipInput").val().toString();
@@ -210,7 +213,6 @@ var OBS;
     class ObsConnection {
         password = null;
         tryedToConnect = false;
-        checkAuthMessageIdentifier = "MessageIdentifier-CheckAuthRequired";
         tryAuthMessageIdentifier = "MessageIdentifier-TryAuth";
         webSocket = null;
         connectionResultCallback = null;
@@ -244,17 +246,17 @@ var OBS;
                 this.resetSocket();
             try {
                 this.webSocket = new WebSocket(`ws://${ip}:${port}`);
+                this.webSocket.onopen = this.socketOnOpen;
+                this.webSocket.onmessage = this.socketOnMessage;
+                this.webSocket.onclose = this.socketOnClose;
+                this.webSocket.onerror = this.socketOnError;
+                this.password = password;
             }
             catch {
                 this.setObsConnectionResult(ConnectionResult.socketAddressUnreachable);
                 this.webSocket = null;
                 return;
             }
-            this.webSocket.onopen = this.socketOnOpen;
-            this.webSocket.onmessage = this.socketOnMessage;
-            this.webSocket.onclose = this.socketOnClose;
-            this.webSocket.onerror = this.socketOnError;
-            this.password = password;
         }
         disconnect() {
             this.password = null;
@@ -282,7 +284,6 @@ var OBS;
         }
         socketOnOpen = (event) => {
             CustomLogger.Log("[OPEN] Connection established");
-            this.webSocket.send('{"request-type": "GetAuthRequired", "message-id": "' + this.checkAuthMessageIdentifier + '"}');
         };
         socketOnMessage = (event) => {
             if (this.tryedToConnect == false) {
@@ -308,7 +309,8 @@ var OBS;
         };
         resolveAuth(obj) {
             let data = JSON.parse(obj);
-            if (data["message-id"] == this.checkAuthMessageIdentifier) {
+            let authRequired = data.d.authentication != null;
+            if (data["op"] == "0") {
                 if (data.authRequired) {
                     this.auth(data.challenge, data.salt);
                 }
@@ -556,9 +558,11 @@ var ObsAppModules;
     class Points extends OBS.Modules.ModuleBase {
         points = [];
         obsManager = null;
-        filter = null;
         pointHtmlDivId;
         parentJQuery;
+        obsSourceRect;
+        obsOffsetAndScale = { leftOffset: 0, topOffset: 0, horizontalScale: 1, verticalScale: 1 };
+        filter = { sourceName: null, filterName: null, optionalPreviewSourceName: null };
         pointRadius = 12;
         constructor(moduleIdentifier, pointHtmlDivId) {
             super(moduleIdentifier);
@@ -570,13 +574,22 @@ var ObsAppModules;
             this.parentJQuery = $(pointHtmlDivId);
             $(window).on('resize', () => {
                 if (this.filter != null)
-                    this.set3DFilter(this.filter.sourceName, this.filter.filterName);
+                    this.set3DFilter(this.filter.sourceName, this.filter.filterName, this.filter.optionalPreviewSourceName);
             });
         }
-        set3DFilter(source, filter) {
-            this.filter = { sourceName: source, filterName: filter };
+        async set3DFilter(sourceName, filterName, previewSourceName = null) {
+            this.obsOffsetAndScale = await this.getOffsetAndScale(previewSourceName, sourceName);
+            this.filter.sourceName = sourceName;
+            this.filter.filterName = filterName;
+            if (previewSourceName != null)
+                this.filter.optionalPreviewSourceName = previewSourceName;
             this.removeAllPoints();
-            this.createAllPoints(source, filter);
+            await this.createAllPoints(sourceName, filterName);
+        }
+        async previewChaged(previewSourceName) {
+            this.filter.optionalPreviewSourceName = previewSourceName;
+            this.obsOffsetAndScale = await this.getOffsetAndScale(previewSourceName, this.filter.sourceName);
+            await this.set3DFilter(this.filter.sourceName, this.filter.filterName, this.filter.optionalPreviewSourceName);
         }
         onConnectionSet(obs) {
             if (this.obsManager != null)
@@ -631,7 +644,11 @@ var ObsAppModules;
         async getObsFilter(sourceName, filterName) {
             let filter;
             let obj = await this.obsManager.sendMessageAsync({ "request-type": "GetSourceFilters", "sourceName": sourceName });
+            if (obj == null || obj.responseObj.status == 'error')
+                return null;
             let filters = obj.responseObj.filters;
+            if (filters == null)
+                return null;
             filters.forEach((value, index) => {
                 if (value.type == "streamfx-filter-transform" && value.name == filterName)
                     filter = value;
@@ -692,6 +709,55 @@ var ObsAppModules;
                 case PointLocation.bottomRight: return "Corners.BottomRight";
                 case PointLocation.bottomLeft: return "Corners.BottomLeft";
             }
+        }
+        async getOffsetAndScale(previewSourceName, sourceName) {
+            let noOffset = { leftOffset: 0, topOffset: 0, verticalScale: 1, horizontalScale: 1 };
+            if (sourceName == null || sourceName.length < 1 || previewSourceName == null || previewSourceName.length < 1) {
+                return noOffset;
+            }
+            let videoSettingsPromise = this.obsManager.sendMessageAsync({ "request-type": "GetVideoSettings" });
+            let sourcePromise = this.obsManager.sendMessageAsync({ "request-type": "GetSceneList" });
+            let source = await sourcePromise;
+            if (source == null || source.responseObj == null)
+                return noOffset;
+            let scenes = source.responseObj;
+            let offset = this.findOffsetAndScaleRecursive(scenes, previewSourceName, source, { leftOffset: 0, topOffset: 0, horizontalSize: -1, verticalSize: -1 });
+            let videoSettings = await videoSettingsPromise;
+            let baseWidth = videoSettings.responseObj.baseWidth;
+            let baseHeight = videoSettings.responseObj.baseHeight;
+            return offset[0]
+                ? this.offsetAndSizeToOffsetAndScale(offset[1], baseWidth, baseHeight)
+                : noOffset;
+        }
+        offsetAndSizeToOffsetAndScale(offset, baseWidth, baseHeight) {
+            return {
+                leftOffset: offset.leftOffset,
+                topOffset: offset.topOffset,
+                horizontalScale: offset.horizontalSize / baseWidth,
+                verticalScale: offset.verticalSize / baseHeight
+            };
+        }
+        findOffsetAndScaleRecursive(source, previewSourceName, sourceName, offsetAtThisLevel) {
+            if (source != null && source.name == previewSourceName) {
+                return [true, offsetAtThisLevel];
+            }
+            source.sources?.forEach((element) => {
+                let offset = this.getIncrementedOffsetAndSizeFromSource(element, offsetAtThisLevel.leftOffset, offsetAtThisLevel.topOffset);
+                return this.findOffsetAndScaleRecursive(source, previewSourceName, sourceName, offset);
+            });
+            source.groupChildren?.forEach((element) => {
+                let offset = this.getIncrementedOffsetAndSizeFromSource(element, offsetAtThisLevel.leftOffset, offsetAtThisLevel.topOffset);
+                return this.findOffsetAndScaleRecursive(source, previewSourceName, sourceName, offset);
+            });
+            return [false, null];
+        }
+        getIncrementedOffsetAndSizeFromSource(element, incrementLeft, incrementTop) {
+            return {
+                leftOffset: element.x ?? 0 + incrementLeft,
+                topOffset: element.y ?? 0 + incrementTop,
+                horizontalSize: element.cx ?? -1,
+                verticalSize: element.cy ?? -1,
+            };
         }
     }
     ObsAppModules.Points = Points;
