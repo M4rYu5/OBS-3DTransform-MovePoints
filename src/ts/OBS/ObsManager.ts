@@ -84,7 +84,7 @@ namespace OBS {
 
             // copy the object to be send to OBS and set it's id
             let copy = { ...(objToSend as any) };
-            copy["message-id"] = asyncKey;
+            copy["requestId"] = asyncKey;
 
             // construct the promise to be returned
             let promise: Promise<any> = new Promise<any>((resolve, reject) => {
@@ -116,7 +116,7 @@ namespace OBS {
          * @returns true if the message was handled by a Promise/async call
          */
         private handleAsync(this: ObsManager, obj: any) {
-            var messageId = obj["message-id"];
+            var messageId = obj["requestId"];
             if(messageId == null)
                 return false;
             if (!messageId.startsWith(this.asyncMessageIdPrefix))
@@ -181,7 +181,7 @@ namespace OBS {
          * @returns true if the message was handled by a module
          */
         protected handleModule(this: ObsManager, obj: any): boolean {
-            var moduleId = obj["message-id"];
+            var moduleId = obj["requestId"];
             if (!this.hasModuleId(moduleId))
                 return false;
 

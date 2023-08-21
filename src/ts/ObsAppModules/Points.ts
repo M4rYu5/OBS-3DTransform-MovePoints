@@ -85,12 +85,12 @@ namespace ObsAppModules {
             let corner: Corner = this.calculateCornerPosition(pointLocation, newPosition)
             let pointId: string = this.getObsPointId(pointLocation);
 
-            let message =  '{ "request-type": "SetSourceFilterSettings", "sourceName": "'
+            let message =  '{ "requestType": "SetSourceFilterSettings", "sourceName": "'
                                 + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
                                 + '", "filterSettings": { "'
                                 + pointId + '.X": ' + corner.X + ', "'
                                 + pointId + '.Y": ' + corner.Y
-                                +' }, "message-id": "'+ this.getIdentifier().getId() + '" }';
+                                +' }, "requestId": "'+ this.getIdentifier().getId() + '" }';
 
             this.obsManager.sendMessage(message);        
         }
@@ -139,7 +139,7 @@ namespace ObsAppModules {
             let filter: any;
 
             // find filter
-            let obj = await this.obsManager.sendMessageAsync({ "request-type": "GetSourceFilters", "sourceName": sourceName });
+            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilters", "sourceName": sourceName });
             let filters: any[] = obj.responseObj.filters;
             filters.forEach((value, index) => {
                 if (value.type == "streamfx-filter-transform" && value.name == filterName)
@@ -153,9 +153,9 @@ namespace ObsAppModules {
             let test = filter.settings["Camera.Mode"];
             if (test != 2) {
                 this.obsManager.sendMessage(
-                    '{ "request-type": "SetSourceFilterSettings", "sourceName": "'
+                    '{ "requestType": "SetSourceFilterSettings", "sourceName": "'
                     + sourceName + '", "filterName": "' + filterName
-                    + '", "filterSettings": { "Camera.Mode": 2 }, "message-id": "ObsAppModules-Points-set-Camera-Mode-2" }');
+                    + '", "filterSettings": { "Camera.Mode": 2 }, "requestId": "ObsAppModules-Points-set-Camera-Mode-2" }');
                 await delay(20)
                 return this.getObsFilter(sourceName, filterName);
             }

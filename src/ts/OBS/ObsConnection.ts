@@ -71,7 +71,8 @@ namespace OBS {
             if (!this.isConnected())
                 return false;
 
-            try { this.webSocket.send(jsonMessage); }
+            let message_comp = '{"op": 6, "d": ' + jsonMessage + '}';
+            try { this.webSocket.send(message_comp);}
             catch { return false; }
 
             return true;
@@ -149,8 +150,8 @@ namespace OBS {
             if (this.handleAuth(obj, event.data)) {
                 return;
             }
-            else {
-                this.onMessageReceived(event.data);
+            else if (obj.op == 5) {
+                this.onMessageReceived(JSON.stringify(obj.d));
             }
         }
         
@@ -183,8 +184,8 @@ namespace OBS {
          * @returns returns true when the message is the destined to be used in auth flow.
          */
         private handleAuth(obj: any, obj_json: string): boolean {
-            if (obj.op == "0") {
-                if (obj.d.rpcVersion != "1") {
+            if (obj.op == 0) {
+                if (obj.d.rpcVersion != 1) {
                     CustomLogger.Log("server responded with rpc version " + obj.d.rpcVersion + ", but the client expected version 1.", CustomLogger.LogType.info);
                 }
                 if (obj.d.authentication != null) {
@@ -204,12 +205,12 @@ namespace OBS {
                     CustomLogger.Log("[AUTH DONE]", CustomLogger.LogType.info);
                 }
             }
-            if (obj.op == "1"){
+            if (obj.op == 1){
                 // this is the message send from the client to the server after Hello
                 return true;
             }
-            if (obj.op == "2"){
-                if (obj.d.negotiatedRpcVersion != "1") {
+            if (obj.op == 2){
+                if (obj.d.negotiatedRpcVersion != 1) {
                     CustomLogger.Log("client requested rpcVersion 1, but the server responded with rpcVersion " + obj.d.negotiatedRpcVersion + ".", CustomLogger.LogType.wornign);
                 }
                 CustomLogger.Log("[AUTH DONE]", CustomLogger.LogType.info);
