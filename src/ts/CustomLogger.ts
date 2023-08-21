@@ -8,6 +8,7 @@ namespace CustomLogger {
 
     export function Log(message: string, type: LogType = LogType.none) {
         let element = $("<div>");
+        element.css("border-bottom", "1px solid black");
         element.addClass("log");
         element.addClass("col-12");
         if (message != null) {
