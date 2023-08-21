@@ -20,9 +20,7 @@ namespace OBS {
 
 
         private password: string = null;
-        private tryedToConnect: boolean = false;
 
-        private checkAuthMessageIdentifier: string = "MessageIdentifier-CheckAuthRequired";
         private tryAuthMessageIdentifier: string = "MessageIdentifier-TryAuth";
 
         protected webSocket: WebSocket = null;
@@ -116,9 +114,6 @@ namespace OBS {
 
 
 
-
-
-
         /** clean any link to webSocket and close it */
         private resetSocket() {
             CustomLogger.Log("[socket reset]", CustomLogger.LogType.info);
@@ -135,11 +130,9 @@ namespace OBS {
 
             this.webSocket.close();
             this.webSocket = null;
-            this.tryedToConnect = false;
         }
 
         private setObsConnectionResult(connection: ConnectionResult) {
-            this.tryedToConnect = true;
             this.onConnectResult(connection);
             CustomLogger.Log("[connectionResult]: " + ConnectionResult[connection], CustomLogger.LogType.info);
         }
@@ -147,21 +140,20 @@ namespace OBS {
         /** onOpen webSocket handler */
         private socketOnOpen = (event: Event) => {
             CustomLogger.Log("[OPEN] Connection established");
-            // check if auth is required
-            this.webSocket.send('{"request-type": "GetAuthRequired", "message-id": "' + this.checkAuthMessageIdentifier + '"}');
         }
+
         /** onMessage webSocket handler */
         private socketOnMessage = (event: MessageEvent) => {
-            if (this.tryedToConnect == false) {
-                CustomLogger.Log("[RECEIVED auth]: " + event.data)
-                this.resolveAuth(event.data);
+            let obj = JSON.parse(event.data);
+
+            if (this.handleAuth(obj, event.data)) {
+                return;
             }
             else {
-                // disabled, since will log every message that's not about atuth
-                // CustomLogger.Log("[RECEIVED external]: " + event.data)
                 this.onMessageReceived(event.data);
             }
         }
+        
         /** onClose webSocket handler */
         private socketOnClose = (event: CloseEvent) => {
             if (event.wasClean) {
@@ -182,38 +174,54 @@ namespace OBS {
             CustomLogger.Log(`[error] ${JSON.stringify(error)}`);
         }
 
-        /** handle the connection and auth flow */
-        private resolveAuth(obj: string): void {
-            let data = JSON.parse(obj);
 
-            // process message from GetAuthRequired
-            if (data["message-id"] == this.checkAuthMessageIdentifier) {
-                if (data.authRequired) {
-                    // send the auth token to the server, and handle the result in another if branch
-                    this.auth(data.challenge, data.salt);
+
+        /**
+         * Handles the client authentication
+         * @param obj the received object from obs-websocket
+         * @param obj_json the received json from obs-websocket
+         * @returns returns true when the message is the destined to be used in auth flow.
+         */
+        private handleAuth(obj: any, obj_json: string): boolean {
+            if (obj.op == "0") {
+                if (obj.d.rpcVersion != "1") {
+                    CustomLogger.Log("server responded with rpc version " + obj.d.rpcVersion + ", but the client expected version 1.", CustomLogger.LogType.info);
                 }
-                else {
-                    // the obs server is not password protected; all set
-                    this.setObsConnectionResult(ConnectionResult.succeed)
+                if (obj.d.authentication != null) {
+                    let authToken = this.compute_auth_token(obj.d.authentication.challenge, obj.d.authentication.salt)
+                    let response = {
+                        "op": 1,
+                        "d": {
+                          "rpcVersion": 1,
+                          "authentication": authToken,
+                          "eventSubscriptions": 0
+                        }
+                      };
+                      this.webSocket.send(JSON.stringify(response));
+                      return true;
+                }
+                else{
+                    CustomLogger.Log("[AUTH DONE]", CustomLogger.LogType.info);
                 }
             }
-
-            // received a response from owr authentication request
-            else if (data["message-id"] == this.tryAuthMessageIdentifier) {
-                if (data.status == "ok") {
-                    this.setObsConnectionResult(ConnectionResult.succeed);
-                }
-                if (data.status == "error") {
-                    {
-                        this.setObsConnectionResult(ConnectionResult.wrongAuthDetails)
-                        this.disconnect();
-                    }
-                }
+            if (obj.op == "1"){
+                // this is the message send from the client to the server after Hello
+                return true;
             }
+            if (obj.op == "2"){
+                if (obj.d.negotiatedRpcVersion != "1") {
+                    CustomLogger.Log("client requested rpcVersion 1, but the server responded with rpcVersion " + obj.d.negotiatedRpcVersion + ".", CustomLogger.LogType.wornign);
+                }
+                CustomLogger.Log("[AUTH DONE]", CustomLogger.LogType.info);
+                return true;
+            }
+
+            return false;
         }
 
-        /** generate and sends the auth token */
-        private auth(challenge: string, salt: string) {
+
+        /** uses the challenge and salt received from the server and with the current password will compute the auth token */
+        private compute_auth_token(challenge: string, salt: string){
             let password: string = this.password;
             this.password = null;
 
@@ -223,18 +231,7 @@ namespace OBS {
             let shaPchallenge = hexToBase64(sha) + challenge;
             let sha2 = sha256(shaPchallenge);
             let authToken = hexToBase64(sha2);
-
-            let temp = {
-                "request-type": "Authenticate",
-                "auth": authToken,
-                "message-id": this.tryAuthMessageIdentifier
-            }
-
-            CustomLogger.Log('[Sending Auth Token]', CustomLogger.LogType.info);
-            let token: string = JSON.stringify(temp);
-            this.webSocket.send(token);
-            //CustomLogger.Log(a);
-
+            return authToken;
         }
 
 
