@@ -2,7 +2,7 @@ namespace ObsAppModules {
     export class PreviewUpdater extends OBS.Modules.ModuleBase {
 
         private requestMessage: any = {
-            "request-type": "TakeSourceScreenshot",
+            "requestType": "TakeSourceScreenshot",
             "embedPictureFormat": "jpg"
         }
 

@@ -18,9 +18,9 @@ namespace OBS.Modules{
             return this.id;
         }
         
-        /** set the "message-id" property to object parameter. */
+        /** set the "requestId" property to object parameter. */
         protected setIdentifierToObject(object: any){
-            object["message-id"] = this.getIdentifier().getId();
+            object["requestId"] = this.getIdentifier().getId();
         }
 
     }

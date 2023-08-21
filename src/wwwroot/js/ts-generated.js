@@ -9,6 +9,7 @@ var CustomLogger;
     })(LogType = CustomLogger.LogType || (CustomLogger.LogType = {}));
     function Log(message, type = LogType.none) {
         let element = $("<div>");
+        element.css("border-bottom", "1px solid black");
         element.addClass("log");
         element.addClass("col-12");
         if (message != null) {
@@ -209,8 +210,6 @@ var OBS;
     })(ConnectionResult = OBS.ConnectionResult || (OBS.ConnectionResult = {}));
     class ObsConnection {
         password = null;
-        tryedToConnect = false;
-        checkAuthMessageIdentifier = "MessageIdentifier-CheckAuthRequired";
         tryAuthMessageIdentifier = "MessageIdentifier-TryAuth";
         webSocket = null;
         connectionResultCallback = null;
@@ -228,8 +227,9 @@ var OBS;
         sendMessage(jsonMessage) {
             if (!this.isConnected())
                 return false;
+            let message_comp = '{"op": 6, "d": ' + jsonMessage + '}';
             try {
-                this.webSocket.send(jsonMessage);
+                this.webSocket.send(message_comp);
             }
             catch {
                 return false;
@@ -273,24 +273,21 @@ var OBS;
             this.webSocket.onerror = null;
             this.webSocket.close();
             this.webSocket = null;
-            this.tryedToConnect = false;
         }
         setObsConnectionResult(connection) {
-            this.tryedToConnect = true;
             this.onConnectResult(connection);
             CustomLogger.Log("[connectionResult]: " + ConnectionResult[connection], CustomLogger.LogType.info);
         }
         socketOnOpen = (event) => {
             CustomLogger.Log("[OPEN] Connection established");
-            this.webSocket.send('{"request-type": "GetAuthRequired", "message-id": "' + this.checkAuthMessageIdentifier + '"}');
         };
         socketOnMessage = (event) => {
-            if (this.tryedToConnect == false) {
-                CustomLogger.Log("[RECEIVED auth]: " + event.data);
-                this.resolveAuth(event.data);
+            let obj = JSON.parse(event.data);
+            if (this.handleAuth(obj, event.data)) {
+                return;
             }
-            else {
-                this.onMessageReceived(event.data);
+            else if (obj.op == 5) {
+                this.onMessageReceived(JSON.stringify(obj.d));
             }
         };
         socketOnClose = (event) => {
@@ -306,43 +303,48 @@ var OBS;
         socketOnError = (error) => {
             CustomLogger.Log(`[error] ${JSON.stringify(error)}`);
         };
-        resolveAuth(obj) {
-            let data = JSON.parse(obj);
-            if (data["message-id"] == this.checkAuthMessageIdentifier) {
-                if (data.authRequired) {
-                    this.auth(data.challenge, data.salt);
+        handleAuth(obj, obj_json) {
+            if (obj.op == 0) {
+                if (obj.d.rpcVersion != 1) {
+                    CustomLogger.Log("server responded with rpc version " + obj.d.rpcVersion + ", but the client expected version 1.", CustomLogger.LogType.info);
+                }
+                if (obj.d.authentication != null) {
+                    let authToken = this.compute_auth_token(obj.d.authentication.challenge, obj.d.authentication.salt);
+                    let response = {
+                        "op": 1,
+                        "d": {
+                            "rpcVersion": 1,
+                            "authentication": authToken,
+                            "eventSubscriptions": 0
+                        }
+                    };
+                    this.webSocket.send(JSON.stringify(response));
+                    return true;
                 }
                 else {
-                    this.setObsConnectionResult(ConnectionResult.succeed);
+                    CustomLogger.Log("[AUTH DONE]", CustomLogger.LogType.info);
                 }
             }
-            else if (data["message-id"] == this.tryAuthMessageIdentifier) {
-                if (data.status == "ok") {
-                    this.setObsConnectionResult(ConnectionResult.succeed);
-                }
-                if (data.status == "error") {
-                    {
-                        this.setObsConnectionResult(ConnectionResult.wrongAuthDetails);
-                        this.disconnect();
-                    }
-                }
+            if (obj.op == 1) {
+                return true;
             }
+            if (obj.op == 2) {
+                if (obj.d.negotiatedRpcVersion != 1) {
+                    CustomLogger.Log("client requested rpcVersion 1, but the server responded with rpcVersion " + obj.d.negotiatedRpcVersion + ".", CustomLogger.LogType.wornign);
+                }
+                CustomLogger.Log("[AUTH DONE]", CustomLogger.LogType.info);
+                return true;
+            }
+            return false;
         }
-        auth(challenge, salt) {
+        compute_auth_token(challenge, salt) {
             let password = this.password;
             this.password = null;
             let sha = sha256(password + salt);
             let shaPchallenge = hexToBase64(sha) + challenge;
             let sha2 = sha256(shaPchallenge);
             let authToken = hexToBase64(sha2);
-            let temp = {
-                "request-type": "Authenticate",
-                "auth": authToken,
-                "message-id": this.tryAuthMessageIdentifier
-            };
-            CustomLogger.Log('[Sending Auth Token]', CustomLogger.LogType.info);
-            let token = JSON.stringify(temp);
-            this.webSocket.send(token);
+            return authToken;
         }
         onConnectResult(connection) {
             this.connectionResultCallback?.call(this, connection);
@@ -410,7 +412,7 @@ var OBS;
             else
                 this.asyncCallsId++;
             let copy = { ...objToSend };
-            copy["message-id"] = asyncKey;
+            copy["requestId"] = asyncKey;
             let promise = new Promise((resolve, reject) => {
                 this.unresolvedPromises[asyncKey] = { promise: null, resolve: resolve, reject: reject };
             });
@@ -427,7 +429,7 @@ var OBS;
             localRejectFunc({ status: Status.error, message: "Timeout", responseObj: null });
         };
         handleAsync(obj) {
-            var messageId = obj["message-id"];
+            var messageId = obj["requestId"];
             if (messageId == null)
                 return false;
             if (!messageId.startsWith(this.asyncMessageIdPrefix))
@@ -463,7 +465,7 @@ var OBS;
             return moduleId in this.modules;
         }
         handleModule(obj) {
-            var moduleId = obj["message-id"];
+            var moduleId = obj["requestId"];
             if (!this.hasModuleId(moduleId))
                 return false;
             var module = this.modules[moduleId];
@@ -508,7 +510,7 @@ var OBS;
                 return this.id;
             }
             setIdentifierToObject(object) {
-                object["message-id"] = this.getIdentifier().getId();
+                object["requestId"] = this.getIdentifier().getId();
             }
         }
         Modules.ModuleBase = ModuleBase;
@@ -592,12 +594,12 @@ var ObsAppModules;
             console.log(newPosition.left, newPosition.top);
             let corner = this.calculateCornerPosition(pointLocation, newPosition);
             let pointId = this.getObsPointId(pointLocation);
-            let message = '{ "request-type": "SetSourceFilterSettings", "sourceName": "'
+            let message = '{ "requestType": "SetSourceFilterSettings", "sourceName": "'
                 + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
                 + '", "filterSettings": { "'
                 + pointId + '.X": ' + corner.X + ', "'
                 + pointId + '.Y": ' + corner.Y
-                + ' }, "message-id": "' + this.getIdentifier().getId() + '" }';
+                + ' }, "requestId": "' + this.getIdentifier().getId() + '" }';
             this.obsManager.sendMessage(message);
         }
         async createAllPoints(sourceName, filterName) {
@@ -630,7 +632,7 @@ var ObsAppModules;
         }
         async getObsFilter(sourceName, filterName) {
             let filter;
-            let obj = await this.obsManager.sendMessageAsync({ "request-type": "GetSourceFilters", "sourceName": sourceName });
+            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilters", "sourceName": sourceName });
             let filters = obj.responseObj.filters;
             filters.forEach((value, index) => {
                 if (value.type == "streamfx-filter-transform" && value.name == filterName)
@@ -640,9 +642,9 @@ var ObsAppModules;
                 return null;
             let test = filter.settings["Camera.Mode"];
             if (test != 2) {
-                this.obsManager.sendMessage('{ "request-type": "SetSourceFilterSettings", "sourceName": "'
+                this.obsManager.sendMessage('{ "requestType": "SetSourceFilterSettings", "sourceName": "'
                     + sourceName + '", "filterName": "' + filterName
-                    + '", "filterSettings": { "Camera.Mode": 2 }, "message-id": "ObsAppModules-Points-set-Camera-Mode-2" }');
+                    + '", "filterSettings": { "Camera.Mode": 2 }, "requestId": "ObsAppModules-Points-set-Camera-Mode-2" }');
                 await delay(20);
                 return this.getObsFilter(sourceName, filterName);
             }
@@ -700,7 +702,7 @@ var ObsAppModules;
 (function (ObsAppModules) {
     class PreviewUpdater extends OBS.Modules.ModuleBase {
         requestMessage = {
-            "request-type": "TakeSourceScreenshot",
+            "requestType": "TakeSourceScreenshot",
             "embedPictureFormat": "jpg"
         };
         timer;
