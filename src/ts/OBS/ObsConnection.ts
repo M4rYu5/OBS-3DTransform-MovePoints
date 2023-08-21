@@ -22,7 +22,7 @@ namespace OBS {
         private password: string = null;
         private tryedToConnect: boolean = false;
 
-        private checkAuthMessageIdentifier: string = "MessageIdentifier-CheckAuthRequired";
+        //private checkAuthMessageIdentifier: string = "MessageIdentifier-CheckAuthRequired";
         private tryAuthMessageIdentifier: string = "MessageIdentifier-TryAuth";
 
         protected webSocket: WebSocket = null;
@@ -91,18 +91,20 @@ namespace OBS {
             try {
                 this.webSocket = new WebSocket(`ws://${ip}:${port}`);
 
+                //this.webSocket.addEventListener('open', this.socketOnOpen);
+
+                this.webSocket.onopen = this.socketOnOpen;
+                this.webSocket.onmessage = this.socketOnMessage;
+                this.webSocket.onclose = this.socketOnClose;
+                this.webSocket.onerror = this.socketOnError;
+                this.password = password;
+
             }
             catch {
                 this.setObsConnectionResult(ConnectionResult.socketAddressUnreachable);
                 this.webSocket = null;
                 return;
             }
-
-            this.webSocket.onopen = this.socketOnOpen;
-            this.webSocket.onmessage = this.socketOnMessage;
-            this.webSocket.onclose = this.socketOnClose;
-            this.webSocket.onerror = this.socketOnError;
-            this.password = password;
         }
 
         /** Disconnect from web socket */
@@ -148,7 +150,7 @@ namespace OBS {
         private socketOnOpen = (event: Event) => {
             CustomLogger.Log("[OPEN] Connection established");
             // check if auth is required
-            this.webSocket.send('{"request-type": "GetAuthRequired", "message-id": "' + this.checkAuthMessageIdentifier + '"}');
+            //this.webSocket.send('{"request-type": "GetAuthRequired", "message-id": "' + this.checkAuthMessageIdentifier + '"}');
         }
         /** onMessage webSocket handler */
         private socketOnMessage = (event: MessageEvent) => {
@@ -185,9 +187,10 @@ namespace OBS {
         /** handle the connection and auth flow */
         private resolveAuth(obj: string): void {
             let data = JSON.parse(obj);
+            let authRequired = data.d.authentication != null;
 
-            // process message from GetAuthRequired
-            if (data["message-id"] == this.checkAuthMessageIdentifier) {
+            // process first message from  (auth info)
+            if (data["op"] == "0") {
                 if (data.authRequired) {
                     // send the auth token to the server, and handle the result in another if branch
                     this.auth(data.challenge, data.salt);

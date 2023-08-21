@@ -19,10 +19,12 @@ namespace App.MainPageActions {
             }
         });
     
-        $("#applySceneNameBtn").on("click", () => {
-            let sceneName: string = $("#sceneNameInput").val().toString();
-            App.InputsFillOnLoad.saveScenePreviewInput(sceneName);
-            App.Connection.obsModules.previewUpdater.setSourceName(sceneName);
+        $("#applySceneNameBtn").on("click", async () => {
+            let sourceName: string = $("#sceneNameInput").val().toString();
+            App.InputsFillOnLoad.saveScenePreviewInput(sourceName);
+            App.Connection.obsModules.previewUpdater.setSourceName(sourceName);
+            await delay(100);
+            await App.Connection.obsModules.cornetPoints.previewChaged(sourceName);
         });
     
         // send raw debugging to socket
@@ -34,8 +36,9 @@ namespace App.MainPageActions {
         $("#applyFilterBtn").on("click", () => {
             let scene = $("#filterSceneNameInput").val().toString();
             let filter = $("#filterNameInput").val().toString();
+            let previewSourceName = $("#sceneNameInput").val().toString();
             App.InputsFillOnLoad.saveSceneAndFilterNameInput(scene, filter);
-            App.Connection.obsModules.cornetPoints.set3DFilter(scene, filter);
+            App.Connection.obsModules.cornetPoints.set3DFilter(scene, filter, previewSourceName);
         })
     
         function tryConnect() {
