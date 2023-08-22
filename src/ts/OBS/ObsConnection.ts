@@ -21,8 +21,6 @@ namespace OBS {
 
         private password: string = null;
 
-        private tryAuthMessageIdentifier: string = "MessageIdentifier-TryAuth";
-
         protected webSocket: WebSocket = null;
 
 
@@ -90,18 +88,20 @@ namespace OBS {
             try {
                 this.webSocket = new WebSocket(`ws://${ip}:${port}`);
 
+                //this.webSocket.addEventListener('open', this.socketOnOpen);
+
+                this.webSocket.onopen = this.socketOnOpen;
+                this.webSocket.onmessage = this.socketOnMessage;
+                this.webSocket.onclose = this.socketOnClose;
+                this.webSocket.onerror = this.socketOnError;
+                this.password = password;
+
             }
             catch {
                 this.setObsConnectionResult(ConnectionResult.socketAddressUnreachable);
                 this.webSocket = null;
                 return;
             }
-
-            this.webSocket.onopen = this.socketOnOpen;
-            this.webSocket.onmessage = this.socketOnMessage;
-            this.webSocket.onclose = this.socketOnClose;
-            this.webSocket.onerror = this.socketOnError;
-            this.password = password;
         }
 
         /** Disconnect from web socket */

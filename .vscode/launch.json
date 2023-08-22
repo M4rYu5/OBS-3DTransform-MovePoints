@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "type": "pwa-chrome",
+            "type": "chrome",
             "preLaunchTask": "tsc: build - src/tsconfig.json",
             "name": "index.html",
             "request": "launch",

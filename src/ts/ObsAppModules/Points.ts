@@ -12,7 +12,9 @@ namespace ObsAppModules {
     }
 
     type PointDraggableLocation = { point: Point, jQueryPoint: JQuery<HTMLElement>, draggable: any, location: PointLocation }
-    type FilterIdentifier = { sourceName: string, filterName: string }
+    type FilterIdentifier = { sourceName: string, filterName: string, optionalPreviewSourceName: string }
+    type OffsetAndScale = { leftOffset: number, topOffset: number, horizontalScale: number, verticalScale: number }
+    type OffsetAndSize = { leftOffset: number, topOffset: number, horizontalSize: number, verticalSize: number }
 
     /**
      * Generate the Draggable points that will be used to manipulate each corner of 3D Transform Filter in OBS
@@ -22,10 +24,13 @@ namespace ObsAppModules {
         private points: PointDraggableLocation[] = [];
 
         protected obsManager: OBS.ObsManager = null;
-        protected filter: FilterIdentifier = null;
         protected pointHtmlDivId: string;
         protected parentJQuery: JQuery<HTMLElement>;
+        protected obsSourceRect: OffsetAndScale;
+        /** keep the offset, from top-left corner, and the scale, relative to the obs canvas size, to calculate the points */
+        protected obsOffsetAndScale: OffsetAndScale = { leftOffset: 0, topOffset: 0, horizontalScale: 1, verticalScale: 1 }
 
+        protected readonly filter: FilterIdentifier = { sourceName: null, filterName: null, optionalPreviewSourceName: null };
         protected readonly pointRadius: number = 12;
 
         constructor(moduleIdentifier: OBS.Modules.ModuleIdentifier, pointHtmlDivId: string) {
@@ -39,21 +44,38 @@ namespace ObsAppModules {
             this.parentJQuery = $(pointHtmlDivId);
 
             // handle the windows resize
-            $(window).on('resize', ()=>{
-                if(this.filter != null)
-                    this.set3DFilter(this.filter.sourceName, this.filter.filterName);
+            $(window).on('resize', () => {
+                if (this.filter != null)
+                    this.set3DFilter(this.filter.sourceName, this.filter.filterName, this.filter.optionalPreviewSourceName);
             });
         }
 
 
 
 
-        /** Set the 3D Filter to use. This will remove previous points*/
-        public set3DFilter(this: Points, source: string, filter: string) {
-            this.filter = { sourceName: source, filterName: filter }
+        /** 
+         * Set the 3D Filter to use. This will remove previous points
+         * @param sourceName The 3D Transform filter's source name
+         * @param filterName The source's 3D Transform filter name
+         * @param previewSourceName If provided, will be used to determine the points total offest. Not needed if the 'sourceName' extends to entire 'previewSourceName' 
+        */
+        public async set3DFilter(this: Points, sourceName: string, filterName: string, previewSourceName: string = null) {
+            this.obsOffsetAndScale = await this.getOffsetAndScale(previewSourceName, sourceName);
+
+            this.filter.sourceName = sourceName;
+            this.filter.filterName = filterName;
+            if (previewSourceName != null)
+                this.filter.optionalPreviewSourceName = previewSourceName;
 
             this.removeAllPoints();
-            this.createAllPoints(source, filter);
+            await this.createAllPoints(sourceName, filterName);
+        }
+
+        public async previewChaged(previewSourceName: string) {
+            this.filter.optionalPreviewSourceName = previewSourceName;
+            this.obsOffsetAndScale = await this.getOffsetAndScale(previewSourceName, this.filter.sourceName);
+
+            await this.set3DFilter(this.filter.sourceName, this.filter.filterName, this.filter.optionalPreviewSourceName);
         }
 
 
@@ -74,6 +96,7 @@ namespace ObsAppModules {
         }
 
 
+
         /** 
          * called when a HTML point is dragged by user
          * @param pointLocation one of the four corners of the filter
@@ -85,14 +108,14 @@ namespace ObsAppModules {
             let corner: Corner = this.calculateCornerPosition(pointLocation, newPosition)
             let pointId: string = this.getObsPointId(pointLocation);
 
-            let message =  '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
-                                + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
-                                + '", "filterSettings": { "'
-                                + pointId + '.X": ' + corner.X + ', "'
-                                + pointId + '.Y": ' + corner.Y
-                                +' }}, "requestId": "'+ this.getIdentifier().getId() + '" }';
+            let message = '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
+                + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
+                + '", "filterSettings": { "'
+                + pointId + '.X": ' + corner.X + ', "'
+                + pointId + '.Y": ' + corner.Y
+                + ' }}, "requestId": "' + this.getIdentifier().getId() + '" }';
 
-            this.obsManager.sendMessage(message);        
+            this.obsManager.sendMessage(message);
         }
 
 
@@ -136,11 +159,17 @@ namespace ObsAppModules {
         }
 
         protected async getObsFilter(this: Points, sourceName: string, filterName: string): Promise<any> {
-            let filter: any;
+            if (sourceName == null || sourceName == "")
+                return;
 
+            let filter: any;
             // find filter
-            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilterList", "requestData": {"sourceName": sourceName }});
+            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilterList", "requestData": { "sourceName": sourceName } });
+            if (obj == null || obj.responseObj.status == 'error')
+                return null;
             let filters: any[] = obj.responseObj.responseData.filters;
+            if (filters == null)
+                return null;
             filters.forEach((value, index) => {
                 if (value.type == "streamfx-filter-transform" && value.name == filterName)
                     filter = value;
@@ -188,7 +217,7 @@ namespace ObsAppModules {
 
         /** transform OBS 3D Transform filter coordonates to local (html) Point position */
         protected calculatePointPosition(this: Points, pointLocation: PointLocation, filter: any, parentWidth: number, parentHeight: number, parentOffsetLeft: number, parentOffsetTop: number): Point {
-
+            // OBS's view is from -100(%) to 100(%)
             let left = (filter.settings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - this.pointRadius;
             let top = (filter.settings[this.getObsPointId(pointLocation) + ".Y"] + 100) / 200 * parentHeight + parentOffsetTop - this.pointRadius;
             return { left: left, top: top };
@@ -224,6 +253,67 @@ namespace ObsAppModules {
             }
         }
 
+
+        /** 
+         * find the offset and scale of transformed source, relative to preview scene
+         * 
+         * ! long running task: don't use it in a loop like logic.
+         * */
+        private async getOffsetAndScale(previewSourceName: string, sourceName: string): Promise<OffsetAndScale> {
+            let noOffset: OffsetAndScale = { leftOffset: 0, topOffset: 0, verticalScale: 1, horizontalScale: 1 }
+
+            if (sourceName == null || sourceName.length < 1 || previewSourceName == null || previewSourceName.length < 1) {
+                return noOffset;
+            }
+
+            let videoSettingsPromise = this.obsManager.sendMessageAsync({ "requestType": "GetVideoSettings" });
+            let sourcePromise: any = this.obsManager.sendMessageAsync({ "requestType": "GetSceneList" });
+            let source = await sourcePromise;
+            if (source == null || source.responseObj == null)
+                return noOffset;
+
+            let scenes = source.responseObj;
+            let offset = this.findOffsetAndScaleRecursive(scenes, previewSourceName, source, { leftOffset: 0, topOffset: 0, horizontalSize: -1, verticalSize: -1 });
+            let videoSettings = await videoSettingsPromise;
+            let baseWidth = videoSettings.responseObj.baseWidth;
+            let baseHeight = videoSettings.responseObj.baseHeight;
+            return offset[0]
+                ? this.offsetAndSizeToOffsetAndScale(offset[1], baseWidth, baseHeight)
+                : noOffset;
+        }
+        private offsetAndSizeToOffsetAndScale(offset: OffsetAndSize, baseWidth: number, baseHeight: number): OffsetAndScale {
+            return {
+                leftOffset: offset.leftOffset,
+                topOffset: offset.topOffset,
+                horizontalScale: offset.horizontalSize / baseWidth,
+                verticalScale: offset.verticalSize / baseHeight
+            }
+        }
+
+        private findOffsetAndScaleRecursive(source: any, previewSourceName: string, sourceName: string, offsetAtThisLevel: OffsetAndSize): [boolean, OffsetAndSize] {
+            if (source != null && source.name == previewSourceName) {
+                return [true, offsetAtThisLevel];
+            }
+
+            source.sources?.forEach((element: any) => {
+                let offset = this.getIncrementedOffsetAndSizeFromSource(element, offsetAtThisLevel.leftOffset, offsetAtThisLevel.topOffset)
+                return this.findOffsetAndScaleRecursive(source, previewSourceName, sourceName, offset);
+            });
+            source.groupChildren?.forEach((element: any) => {
+                let offset = this.getIncrementedOffsetAndSizeFromSource(element, offsetAtThisLevel.leftOffset, offsetAtThisLevel.topOffset)
+                return this.findOffsetAndScaleRecursive(source, previewSourceName, sourceName, offset);
+            });
+
+            return [false, null];
+        }
+        private getIncrementedOffsetAndSizeFromSource(element: any, incrementLeft: number, incrementTop: number): OffsetAndSize {
+            return {
+                leftOffset: element.x ?? 0 + incrementLeft,
+                topOffset: element.y ?? 0 + incrementTop,
+                horizontalSize: element.cx ?? -1,
+                verticalSize: element.cy ?? -1,
+            }
+        }
     }
 
 
