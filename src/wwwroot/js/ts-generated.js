@@ -213,7 +213,6 @@ var OBS;
     })(ConnectionResult = OBS.ConnectionResult || (OBS.ConnectionResult = {}));
     class ObsConnection {
         password = null;
-        tryAuthMessageIdentifier = "MessageIdentifier-TryAuth";
         webSocket = null;
         connectionResultCallback = null;
         disconnectedCallback = null;
@@ -289,7 +288,7 @@ var OBS;
             if (this.handleAuth(obj, event.data)) {
                 return;
             }
-            else if (obj.op == 5) {
+            else if (obj.op == 7) {
                 this.onMessageReceived(JSON.stringify(obj.d));
             }
         };
@@ -603,17 +602,18 @@ var ObsAppModules;
             this.obsManager = null;
         }
         dispatch(arg) {
+            console.log(arg.obj);
         }
         onPointDrag(pointLocation, newPosition) {
             console.log(newPosition.left, newPosition.top);
             let corner = this.calculateCornerPosition(pointLocation, newPosition);
             let pointId = this.getObsPointId(pointLocation);
-            let message = '{ "requestType": "SetSourceFilterSettings", "sourceName": "'
+            let message = '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
                 + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
                 + '", "filterSettings": { "'
                 + pointId + '.X": ' + corner.X + ', "'
                 + pointId + '.Y": ' + corner.Y
-                + ' }, "requestId": "' + this.getIdentifier().getId() + '" }';
+                + ' }}, "requestId": "' + this.getIdentifier().getId() + '" }';
             this.obsManager.sendMessage(message);
         }
         async createAllPoints(sourceName, filterName) {
@@ -645,9 +645,13 @@ var ObsAppModules;
             this.points.push({ point: position, jQueryPoint: point, draggable: draggable, location: pointLocation });
         }
         async getObsFilter(sourceName, filterName) {
+            if (sourceName == null || sourceName == "")
+                return;
             let filter;
-            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilters", "sourceName": sourceName });
-            let filters = obj.responseObj.filters;
+            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilterList", "requestData": { "sourceName": sourceName } });
+            if (obj == null || obj.responseObj.status == 'error')
+                return null;
+            let filters = obj.responseObj.responseData.filters;
             if (filters == null)
                 return null;
             filters.forEach((value, index) => {
@@ -658,9 +662,9 @@ var ObsAppModules;
                 return null;
             let test = filter.settings["Camera.Mode"];
             if (test != 2) {
-                this.obsManager.sendMessage('{ "requestType": "SetSourceFilterSettings", "sourceName": "'
+                this.obsManager.sendMessage('{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
                     + sourceName + '", "filterName": "' + filterName
-                    + '", "filterSettings": { "Camera.Mode": 2 }, "requestId": "ObsAppModules-Points-set-Camera-Mode-2" }');
+                    + '", "filterSettings": { "Camera.Mode": 2 } }, "requestId": "ObsAppModules-Points-set-Camera-Mode-2" }');
                 await delay(20);
                 return this.getObsFilter(sourceName, filterName);
             }
@@ -716,8 +720,8 @@ var ObsAppModules;
             if (sourceName == null || sourceName.length < 1 || previewSourceName == null || previewSourceName.length < 1) {
                 return noOffset;
             }
-            let videoSettingsPromise = this.obsManager.sendMessageAsync({ "request-type": "GetVideoSettings" });
-            let sourcePromise = this.obsManager.sendMessageAsync({ "request-type": "GetSceneList" });
+            let videoSettingsPromise = this.obsManager.sendMessageAsync({ "requestType": "GetVideoSettings" });
+            let sourcePromise = this.obsManager.sendMessageAsync({ "requestType": "GetSceneList" });
             let source = await sourcePromise;
             if (source == null || source.responseObj == null)
                 return noOffset;
@@ -767,8 +771,11 @@ var ObsAppModules;
 (function (ObsAppModules) {
     class PreviewUpdater extends OBS.Modules.ModuleBase {
         requestMessage = {
-            "requestType": "TakeSourceScreenshot",
-            "embedPictureFormat": "jpg"
+            "requestType": "GetSourceScreenshot",
+            "requestData": {
+                "imageFormat": "jpg",
+                "sourceName": ""
+            }
         };
         timer;
         backgroundImage;
@@ -779,7 +786,7 @@ var ObsAppModules;
             this.backgroundImage = backgroundImage;
             this.connection = connection;
             if (sourceName != null)
-                this.requestMessage["sourceName"] = sourceName;
+                this.requestMessage.requestData.sourceName = sourceName;
             this.setIdentifierToObject(this.requestMessage);
             this.updateInterval = updateInterval;
             if (startOnCreate)
@@ -799,22 +806,22 @@ var ObsAppModules;
             return this.timer != null;
         }
         updateBackground() {
-            if (this.connection.isConnected()) {
+            if (this.connection.isConnected() && this.requestMessage.requestData.sourceName != "") {
                 var message = JSON.stringify(this.requestMessage);
                 this.connection.sendMessage(message);
             }
         }
         setSourceName(sourceName) {
             if (sourceName != null && sourceName.length != 0)
-                this.requestMessage["sourceName"] = sourceName;
+                this.requestMessage.requestData.sourceName = sourceName;
             else
                 this.removeSourceName();
         }
         removeSourceName() {
-            delete this.requestMessage["sourceName"];
+            delete this.requestMessage.requestData.sourceName;
         }
         dispatch(arg) {
-            this.backgroundImage.src = arg.obj["img"];
+            this.backgroundImage.src = arg.obj.responseData.imageData;
         }
     }
     ObsAppModules.PreviewUpdater = PreviewUpdater;
