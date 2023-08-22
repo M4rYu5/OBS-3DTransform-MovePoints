@@ -150,7 +150,7 @@ namespace OBS {
             if (this.handleAuth(obj, event.data)) {
                 return;
             }
-            else if (obj.op == 5) {
+            else if (obj.op == 7) {
                 this.onMessageReceived(JSON.stringify(obj.d));
             }
         }
