@@ -2,8 +2,11 @@ namespace ObsAppModules {
     export class PreviewUpdater extends OBS.Modules.ModuleBase {
 
         private requestMessage: any = {
-            "requestType": "TakeSourceScreenshot",
-            "embedPictureFormat": "jpg"
+            "requestType": "GetSourceScreenshot",
+            "requestData": {
+                "imageFormat": "jpg",
+                "sourceName": ""
+              }
         }
 
         private timer?: number;
@@ -18,7 +21,7 @@ namespace ObsAppModules {
             this.backgroundImage = backgroundImage;
             this.connection = connection;
             if (sourceName != null)
-                this.requestMessage["sourceName"] = sourceName;
+                this.requestMessage.requestData.sourceName = sourceName;
             this.setIdentifierToObject(this.requestMessage);
 
             this.updateInterval = updateInterval;
@@ -46,7 +49,7 @@ namespace ObsAppModules {
 
         // called from setInterval
         protected updateBackground() {
-            if (this.connection.isConnected()) {
+            if (this.connection.isConnected() &&  this.requestMessage.requestData.sourceName != "") {
                 var message = JSON.stringify(this.requestMessage);
                 this.connection.sendMessage(message);
             }
@@ -55,7 +58,7 @@ namespace ObsAppModules {
         /** set the source name of which a screenshot will be taken off (not necessarily a scene)*/
         public setSourceName(this: PreviewUpdater, sourceName?: string) {
             if (sourceName != null && sourceName.length != 0)
-                this.requestMessage["sourceName"] = sourceName;
+                this.requestMessage.requestData.sourceName = sourceName;
             else
                 this.removeSourceName();
         }
@@ -63,12 +66,12 @@ namespace ObsAppModules {
 
         /** remove the source name and go back to default (default: current scene) */
         public removeSourceName(this: PreviewUpdater) {
-            delete this.requestMessage["sourceName"];
+            delete this.requestMessage.requestData.sourceName;
         }
 
         /** handle the received message (the image) */
         public override dispatch(this: PreviewUpdater, arg: OBS.Modules.DispatchArgs): void {
-            this.backgroundImage.src = arg.obj["img"];
+            this.backgroundImage.src = arg.obj.responseData.imageData;
         }
     }
 }
