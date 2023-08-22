@@ -70,7 +70,7 @@ namespace ObsAppModules {
         }
         /** called when a message needs to be handled by this module. (not the case at this moment) */
         public override dispatch(this: Points, arg: OBS.Modules.DispatchArgs): void {
-
+            console.log(arg.obj);
         }
 
 
@@ -85,12 +85,12 @@ namespace ObsAppModules {
             let corner: Corner = this.calculateCornerPosition(pointLocation, newPosition)
             let pointId: string = this.getObsPointId(pointLocation);
 
-            let message =  '{ "requestType": "SetSourceFilterSettings", "sourceName": "'
+            let message =  '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
                                 + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
                                 + '", "filterSettings": { "'
                                 + pointId + '.X": ' + corner.X + ', "'
                                 + pointId + '.Y": ' + corner.Y
-                                +' }, "requestId": "'+ this.getIdentifier().getId() + '" }';
+                                +' }}, "requestId": "'+ this.getIdentifier().getId() + '" }';
 
             this.obsManager.sendMessage(message);        
         }
@@ -139,8 +139,8 @@ namespace ObsAppModules {
             let filter: any;
 
             // find filter
-            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilters", "sourceName": sourceName });
-            let filters: any[] = obj.responseObj.filters;
+            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilterList", "requestData": {"sourceName": sourceName }});
+            let filters: any[] = obj.responseObj.responseData.filters;
             filters.forEach((value, index) => {
                 if (value.type == "streamfx-filter-transform" && value.name == filterName)
                     filter = value;
@@ -153,9 +153,9 @@ namespace ObsAppModules {
             let test = filter.settings["Camera.Mode"];
             if (test != 2) {
                 this.obsManager.sendMessage(
-                    '{ "requestType": "SetSourceFilterSettings", "sourceName": "'
+                    '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
                     + sourceName + '", "filterName": "' + filterName
-                    + '", "filterSettings": { "Camera.Mode": 2 }, "requestId": "ObsAppModules-Points-set-Camera-Mode-2" }');
+                    + '", "filterSettings": { "Camera.Mode": 2 } }, "requestId": "ObsAppModules-Points-set-Camera-Mode-2" }');
                 await delay(20)
                 return this.getObsFilter(sourceName, filterName);
             }
