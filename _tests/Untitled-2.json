@@ -1,0 +1,11 @@
+{
+    "d": {
+        "authentication": {
+            "challenge": "RfKz4ZI1jrOu507ovLQu+BWq5QKE6+olJxVG9Dlzqis=",
+            "salt": "aD+2/sXM+HnWOoRXLjPTUk0onARAxwa3vm5TPM9quL8="
+        },
+        "obsWebSocketVersion": "5.0.1",
+        "rpcVersion": 1
+    },
+    "op": 0
+}'
