@@ -171,7 +171,7 @@ namespace ObsAppModules {
             if (filters == null)
                 return null;
             filters.forEach((value, index) => {
-                if (value.type == "streamfx-filter-transform" && value.name == filterName)
+                if (value.filterKind == "streamfx-filter-transform" && value.filterName == filterName)
                     filter = value;
             });
 
@@ -179,7 +179,7 @@ namespace ObsAppModules {
                 return null;
 
             // we need the Camera.Mode to be in corner pin mode or mode 2 (as number not string)
-            let test = filter.settings["Camera.Mode"];
+            let test = filter.filterSettings["Camera.Mode"];
             if (test != 2) {
                 this.obsManager.sendMessage(
                     '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
@@ -218,8 +218,8 @@ namespace ObsAppModules {
         /** transform OBS 3D Transform filter coordonates to local (html) Point position */
         protected calculatePointPosition(this: Points, pointLocation: PointLocation, filter: any, parentWidth: number, parentHeight: number, parentOffsetLeft: number, parentOffsetTop: number): Point {
             // OBS's view is from -100(%) to 100(%)
-            let left = (filter.settings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - this.pointRadius;
-            let top = (filter.settings[this.getObsPointId(pointLocation) + ".Y"] + 100) / 200 * parentHeight + parentOffsetTop - this.pointRadius;
+            let left = (filter.filterSettings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - this.pointRadius;
+            let top = (filter.filterSettings[this.getObsPointId(pointLocation) + ".Y"] + 100) / 200 * parentHeight + parentOffsetTop - this.pointRadius;
             return { left: left, top: top };
         }
 
