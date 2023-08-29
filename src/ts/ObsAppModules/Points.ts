@@ -54,7 +54,7 @@ namespace ObsAppModules {
 
 
         /** 
-         * Set the 3D Filter to use. This will remove previous points
+         * Set the OBS 3D Filter and adds draggable corners in html.
          * @param sourceName The 3D Transform filter's source name
          * @param filterName The source's 3D Transform filter name
          * @param previewSourceName If provided, will be used to determine the points total offest. Not needed if the 'sourceName' extends to entire 'previewSourceName' 
