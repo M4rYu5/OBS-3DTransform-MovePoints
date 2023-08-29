@@ -71,11 +71,9 @@ namespace ObsAppModules {
             await this.createAllPoints(sourceName, filterName);
         }
 
-        public async previewChaged(previewSourceName: string) {
-            this.filter.optionalPreviewSourceName = previewSourceName;
-            this.obsOffsetAndScale = await this.getOffsetAndScale(previewSourceName, this.filter.sourceName);
-
-            await this.set3DFilter(this.filter.sourceName, this.filter.filterName, this.filter.optionalPreviewSourceName);
+        /** Set the preview scene. */
+        public async setPreview(previewSourceName: string) {
+            await this.set3DFilter(this.filter.sourceName, this.filter.filterName, previewSourceName);
         }
 
 

@@ -24,7 +24,7 @@ namespace App.MainPageActions {
             App.InputsFillOnLoad.saveScenePreviewInput(sourceName);
             App.Connection.obsModules.previewUpdater.setSourceName(sourceName);
             await delay(100);
-            await App.Connection.obsModules.cornetPoints.previewChaged(sourceName);
+            await App.Connection.obsModules.cornetPoints.setPreview(sourceName);
         });
     
         // send raw debugging to socket
