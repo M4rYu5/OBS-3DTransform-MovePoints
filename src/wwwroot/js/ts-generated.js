@@ -171,10 +171,12 @@ var App;
                     tryConnect();
                 }
             });
-            $("#applySceneNameBtn").on("click", () => {
-                let sceneName = $("#sceneNameInput").val().toString();
-                App.InputsFillOnLoad.saveScenePreviewInput(sceneName);
-                App.Connection.obsModules.previewUpdater.setSourceName(sceneName);
+            $("#applySceneNameBtn").on("click", async () => {
+                let sourceName = $("#sceneNameInput").val().toString();
+                App.InputsFillOnLoad.saveScenePreviewInput(sourceName);
+                App.Connection.obsModules.previewUpdater.setSourceName(sourceName);
+                await delay(100);
+                await App.Connection.obsModules.cornetPoints.setPreview(sourceName);
             });
             $('#try').on("click", () => {
                 App.Connection.obsManager.sendMessage($("#rawMessageInput").val().toString());
@@ -182,8 +184,9 @@ var App;
             $("#applyFilterBtn").on("click", () => {
                 let scene = $("#filterSceneNameInput").val().toString();
                 let filter = $("#filterNameInput").val().toString();
+                let previewSourceName = $("#sceneNameInput").val().toString();
                 App.InputsFillOnLoad.saveSceneAndFilterNameInput(scene, filter);
-                App.Connection.obsModules.cornetPoints.set3DFilter(scene, filter);
+                App.Connection.obsModules.cornetPoints.set3DFilter(scene, filter, previewSourceName);
             });
             function tryConnect() {
                 let ip = $("#ipInput").val().toString();
@@ -210,7 +213,6 @@ var OBS;
     })(ConnectionResult = OBS.ConnectionResult || (OBS.ConnectionResult = {}));
     class ObsConnection {
         password = null;
-        tryAuthMessageIdentifier = "MessageIdentifier-TryAuth";
         webSocket = null;
         connectionResultCallback = null;
         disconnectedCallback = null;
@@ -244,17 +246,17 @@ var OBS;
                 this.resetSocket();
             try {
                 this.webSocket = new WebSocket(`ws://${ip}:${port}`);
+                this.webSocket.onopen = this.socketOnOpen;
+                this.webSocket.onmessage = this.socketOnMessage;
+                this.webSocket.onclose = this.socketOnClose;
+                this.webSocket.onerror = this.socketOnError;
+                this.password = password;
             }
             catch {
                 this.setObsConnectionResult(ConnectionResult.socketAddressUnreachable);
                 this.webSocket = null;
                 return;
             }
-            this.webSocket.onopen = this.socketOnOpen;
-            this.webSocket.onmessage = this.socketOnMessage;
-            this.webSocket.onclose = this.socketOnClose;
-            this.webSocket.onerror = this.socketOnError;
-            this.password = password;
         }
         disconnect() {
             this.password = null;
@@ -286,7 +288,7 @@ var OBS;
             if (this.handleAuth(obj, event.data)) {
                 return;
             }
-            else if (obj.op == 5) {
+            else if (obj.op == 7) {
                 this.onMessageReceived(JSON.stringify(obj.d));
             }
         };
@@ -308,22 +310,17 @@ var OBS;
                 if (obj.d.rpcVersion != 1) {
                     CustomLogger.Log("server responded with rpc version " + obj.d.rpcVersion + ", but the client expected version 1.", CustomLogger.LogType.info);
                 }
-                if (obj.d.authentication != null) {
-                    let authToken = this.compute_auth_token(obj.d.authentication.challenge, obj.d.authentication.salt);
-                    let response = {
-                        "op": 1,
-                        "d": {
-                            "rpcVersion": 1,
-                            "authentication": authToken,
-                            "eventSubscriptions": 0
-                        }
-                    };
-                    this.webSocket.send(JSON.stringify(response));
-                    return true;
-                }
-                else {
-                    CustomLogger.Log("[AUTH DONE]", CustomLogger.LogType.info);
-                }
+                let authToken = obj.d.authentication == null ? null : this.compute_auth_token(obj.d.authentication.challenge, obj.d.authentication.salt);
+                let response = {
+                    "op": 1,
+                    "d": {
+                        "rpcVersion": 1,
+                        "authentication": authToken,
+                        "eventSubscriptions": 0
+                    }
+                };
+                this.webSocket.send(JSON.stringify(response));
+                return true;
             }
             if (obj.op == 1) {
                 return true;
@@ -558,9 +555,9 @@ var ObsAppModules;
     class Points extends OBS.Modules.ModuleBase {
         points = [];
         obsManager = null;
-        filter = null;
         pointHtmlDivId;
         parentJQuery;
+        filter = { sourceName: null, filterName: null, optionalPreviewSourceName: null };
         pointRadius = 12;
         constructor(moduleIdentifier, pointHtmlDivId) {
             super(moduleIdentifier);
@@ -572,13 +569,18 @@ var ObsAppModules;
             this.parentJQuery = $(pointHtmlDivId);
             $(window).on('resize', () => {
                 if (this.filter != null)
-                    this.set3DFilter(this.filter.sourceName, this.filter.filterName);
+                    this.set3DFilter(this.filter.sourceName, this.filter.filterName, this.filter.optionalPreviewSourceName);
             });
         }
-        set3DFilter(source, filter) {
-            this.filter = { sourceName: source, filterName: filter };
+        async set3DFilter(sourceName, filterName, previewSourceName = null) {
+            this.filter.sourceName = sourceName;
+            this.filter.filterName = filterName;
+            this.filter.optionalPreviewSourceName = previewSourceName;
             this.removeAllPoints();
-            this.createAllPoints(source, filter);
+            await this.createAllPoints(sourceName, filterName);
+        }
+        async setPreview(previewSourceName) {
+            await this.set3DFilter(this.filter.sourceName, this.filter.filterName, previewSourceName);
         }
         onConnectionSet(obs) {
             if (this.obsManager != null)
@@ -589,17 +591,18 @@ var ObsAppModules;
             this.obsManager = null;
         }
         dispatch(arg) {
+            console.log(arg.obj);
         }
         onPointDrag(pointLocation, newPosition) {
-            console.log(newPosition.left, newPosition.top);
-            let corner = this.calculateCornerPosition(pointLocation, newPosition);
+            let newPoint = { left: newPosition.left, top: newPosition.top };
+            let corner = this.htmlToObsCornerPosition(newPoint);
             let pointId = this.getObsPointId(pointLocation);
-            let message = '{ "requestType": "SetSourceFilterSettings", "sourceName": "'
+            let message = '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
                 + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
                 + '", "filterSettings": { "'
                 + pointId + '.X": ' + corner.X + ', "'
                 + pointId + '.Y": ' + corner.Y
-                + ' }, "requestId": "' + this.getIdentifier().getId() + '" }';
+                + ' }}, "requestId": "' + this.getIdentifier().getId() + '" }';
             this.obsManager.sendMessage(message);
         }
         async createAllPoints(sourceName, filterName) {
@@ -631,20 +634,26 @@ var ObsAppModules;
             this.points.push({ point: position, jQueryPoint: point, draggable: draggable, location: pointLocation });
         }
         async getObsFilter(sourceName, filterName) {
+            if (sourceName == null || sourceName == "")
+                return;
             let filter;
-            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilters", "sourceName": sourceName });
-            let filters = obj.responseObj.filters;
+            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilterList", "requestData": { "sourceName": sourceName } });
+            if (obj == null || obj.responseObj.status == 'error')
+                return null;
+            let filters = obj.responseObj.responseData.filters;
+            if (filters == null)
+                return null;
             filters.forEach((value, index) => {
-                if (value.type == "streamfx-filter-transform" && value.name == filterName)
+                if (value.filterKind == "streamfx-filter-transform" && value.filterName == filterName)
                     filter = value;
             });
             if (filter == null)
                 return null;
-            let test = filter.settings["Camera.Mode"];
+            let test = filter.filterSettings["Camera.Mode"];
             if (test != 2) {
-                this.obsManager.sendMessage('{ "requestType": "SetSourceFilterSettings", "sourceName": "'
+                this.obsManager.sendMessage('{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
                     + sourceName + '", "filterName": "' + filterName
-                    + '", "filterSettings": { "Camera.Mode": 2 }, "requestId": "ObsAppModules-Points-set-Camera-Mode-2" }');
+                    + '", "filterSettings": { "Camera.Mode": 2 } }, "requestId": "ObsAppModules-Points-set-Camera-Mode-2" }');
                 await delay(20);
                 return this.getObsFilter(sourceName, filterName);
             }
@@ -661,14 +670,14 @@ var ObsAppModules;
                 bottomLeft: this.calculatePointPosition(PointLocation.bottomLeft, filter, pw, ph, po.left, po.top)
             };
         }
-        calculateCornerPosition(pointLocation, newPosition) {
-            let obsCornerXorLeft = (newPosition.left + this.pointRadius - this.parentJQuery.offset().left) / this.parentJQuery.width() * 200 - 100;
-            let obsCornerYorTop = (newPosition.top + this.pointRadius - this.parentJQuery.offset().top) / this.parentJQuery.height() * 200 - 100;
+        htmlToObsCornerPosition(position) {
+            let obsCornerXorLeft = (position.left + this.pointRadius - this.parentJQuery.offset().left) / this.parentJQuery.width() * 200 - 100;
+            let obsCornerYorTop = (position.top + this.pointRadius - this.parentJQuery.offset().top) / this.parentJQuery.height() * 200 - 100;
             return { X: obsCornerXorLeft, Y: obsCornerYorTop };
         }
         calculatePointPosition(pointLocation, filter, parentWidth, parentHeight, parentOffsetLeft, parentOffsetTop) {
-            let left = (filter.settings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - this.pointRadius;
-            let top = (filter.settings[this.getObsPointId(pointLocation) + ".Y"] + 100) / 200 * parentHeight + parentOffsetTop - this.pointRadius;
+            let left = (filter.filterSettings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - this.pointRadius;
+            let top = (filter.filterSettings[this.getObsPointId(pointLocation) + ".Y"] + 100) / 200 * parentHeight + parentOffsetTop - this.pointRadius;
             return { left: left, top: top };
         }
         getCallbackOnDrag(pointLocation) {
@@ -702,8 +711,11 @@ var ObsAppModules;
 (function (ObsAppModules) {
     class PreviewUpdater extends OBS.Modules.ModuleBase {
         requestMessage = {
-            "requestType": "TakeSourceScreenshot",
-            "embedPictureFormat": "jpg"
+            "requestType": "GetSourceScreenshot",
+            "requestData": {
+                "imageFormat": "jpg",
+                "sourceName": ""
+            }
         };
         timer;
         backgroundImage;
@@ -714,7 +726,7 @@ var ObsAppModules;
             this.backgroundImage = backgroundImage;
             this.connection = connection;
             if (sourceName != null)
-                this.requestMessage["sourceName"] = sourceName;
+                this.requestMessage.requestData.sourceName = sourceName;
             this.setIdentifierToObject(this.requestMessage);
             this.updateInterval = updateInterval;
             if (startOnCreate)
@@ -734,22 +746,22 @@ var ObsAppModules;
             return this.timer != null;
         }
         updateBackground() {
-            if (this.connection.isConnected()) {
+            if (this.connection.isConnected() && this.requestMessage.requestData.sourceName != "") {
                 var message = JSON.stringify(this.requestMessage);
                 this.connection.sendMessage(message);
             }
         }
         setSourceName(sourceName) {
             if (sourceName != null && sourceName.length != 0)
-                this.requestMessage["sourceName"] = sourceName;
+                this.requestMessage.requestData.sourceName = sourceName;
             else
                 this.removeSourceName();
         }
         removeSourceName() {
-            delete this.requestMessage["sourceName"];
+            delete this.requestMessage.requestData.sourceName;
         }
         dispatch(arg) {
-            this.backgroundImage.src = arg.obj["img"];
+            this.backgroundImage.src = arg.obj.responseData.imageData;
         }
     }
     ObsAppModules.PreviewUpdater = PreviewUpdater;

@@ -12,21 +12,26 @@ namespace ObsAppModules {
     }
 
     type PointDraggableLocation = { point: Point, jQueryPoint: JQuery<HTMLElement>, draggable: any, location: PointLocation }
-    type FilterIdentifier = { sourceName: string, filterName: string }
+    type FilterIdentifier = { sourceName: string, filterName: string, optionalPreviewSourceName: string }
+  
+
 
     /**
      * Generate the Draggable points that will be used to manipulate each corner of 3D Transform Filter in OBS
      */
     export class Points extends OBS.Modules.ModuleBase {
 
+
         private points: PointDraggableLocation[] = [];
 
         protected obsManager: OBS.ObsManager = null;
-        protected filter: FilterIdentifier = null;
         protected pointHtmlDivId: string;
         protected parentJQuery: JQuery<HTMLElement>;
-
+    
+        protected readonly filter: FilterIdentifier = { sourceName: null, filterName: null, optionalPreviewSourceName: null };
         protected readonly pointRadius: number = 12;
+
+
 
         constructor(moduleIdentifier: OBS.Modules.ModuleIdentifier, pointHtmlDivId: string) {
             super(moduleIdentifier);
@@ -39,21 +44,32 @@ namespace ObsAppModules {
             this.parentJQuery = $(pointHtmlDivId);
 
             // handle the windows resize
-            $(window).on('resize', ()=>{
-                if(this.filter != null)
-                    this.set3DFilter(this.filter.sourceName, this.filter.filterName);
+            $(window).on('resize', () => {
+                if (this.filter != null)
+                    this.set3DFilter(this.filter.sourceName, this.filter.filterName, this.filter.optionalPreviewSourceName);
             });
         }
 
 
 
-
-        /** Set the 3D Filter to use. This will remove previous points*/
-        public set3DFilter(this: Points, source: string, filter: string) {
-            this.filter = { sourceName: source, filterName: filter }
+        /** 
+         * Set the OBS 3D Filter and adds draggable corners in html.
+         * @param sourceName The 3D Transform filter's source name
+         * @param filterName The source's 3D Transform filter name
+         * @param previewSourceName If provided, will be used to determine the points total offest. Not needed if the 'sourceName' extends to entire 'previewSourceName' 
+        */
+        public async set3DFilter(this: Points, sourceName: string, filterName: string, previewSourceName: string = null) {
+            this.filter.sourceName = sourceName;
+            this.filter.filterName = filterName;
+            this.filter.optionalPreviewSourceName = previewSourceName;
 
             this.removeAllPoints();
-            this.createAllPoints(source, filter);
+            await this.createAllPoints(sourceName, filterName);
+        }
+
+        /** Set the preview scene. */
+        public async setPreview(previewSourceName: string) {
+            await this.set3DFilter(this.filter.sourceName, this.filter.filterName, previewSourceName);
         }
 
 
@@ -74,25 +90,26 @@ namespace ObsAppModules {
         }
 
 
+
         /** 
          * called when a HTML point is dragged by user
          * @param pointLocation one of the four corners of the filter
          * @param newPosition is a {top, left} type through which is received the new position
          */
         protected onPointDrag(this: Points, pointLocation: PointLocation, newPosition: any): void {
-            console.log(newPosition.left, newPosition.top);
-
-            let corner: Corner = this.calculateCornerPosition(pointLocation, newPosition)
+            
+            let newPoint: Point = {left: newPosition.left, top: newPosition.top}
+            let corner: Corner = this.htmlToObsCornerPosition(newPoint)
             let pointId: string = this.getObsPointId(pointLocation);
 
-            let message =  '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
-                                + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
-                                + '", "filterSettings": { "'
-                                + pointId + '.X": ' + corner.X + ', "'
-                                + pointId + '.Y": ' + corner.Y
-                                +' }}, "requestId": "'+ this.getIdentifier().getId() + '" }';
+            let message = '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
+                + this.filter.sourceName + '", "filterName": "' + this.filter.filterName
+                + '", "filterSettings": { "'
+                + pointId + '.X": ' + corner.X + ', "'
+                + pointId + '.Y": ' + corner.Y
+                + ' }}, "requestId": "' + this.getIdentifier().getId() + '" }';
 
-            this.obsManager.sendMessage(message);        
+            this.obsManager.sendMessage(message);
         }
 
 
@@ -136,13 +153,19 @@ namespace ObsAppModules {
         }
 
         protected async getObsFilter(this: Points, sourceName: string, filterName: string): Promise<any> {
-            let filter: any;
+            if (sourceName == null || sourceName == "")
+                return;
 
+            let filter: any;
             // find filter
-            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilterList", "requestData": {"sourceName": sourceName }});
+            let obj = await this.obsManager.sendMessageAsync({ "requestType": "GetSourceFilterList", "requestData": { "sourceName": sourceName } });
+            if (obj == null || obj.responseObj.status == 'error')
+                return null;
             let filters: any[] = obj.responseObj.responseData.filters;
+            if (filters == null)
+                return null;
             filters.forEach((value, index) => {
-                if (value.type == "streamfx-filter-transform" && value.name == filterName)
+                if (value.filterKind == "streamfx-filter-transform" && value.filterName == filterName)
                     filter = value;
             });
 
@@ -150,7 +173,7 @@ namespace ObsAppModules {
                 return null;
 
             // we need the Camera.Mode to be in corner pin mode or mode 2 (as number not string)
-            let test = filter.settings["Camera.Mode"];
+            let test = filter.filterSettings["Camera.Mode"];
             if (test != 2) {
                 this.obsManager.sendMessage(
                     '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
@@ -180,17 +203,17 @@ namespace ObsAppModules {
         }
 
         /** transform local Point (html) position into OBS 3D Transform filter coordonates */
-        protected calculateCornerPosition(this: Points, pointLocation: PointLocation, newPosition: any): Corner {
-            let obsCornerXorLeft = (newPosition.left + this.pointRadius - this.parentJQuery.offset().left) / this.parentJQuery.width() * 200 - 100;
-            let obsCornerYorTop = (newPosition.top + this.pointRadius - this.parentJQuery.offset().top) / this.parentJQuery.height() * 200 - 100;
+        protected htmlToObsCornerPosition(this: Points, position: Point): Corner {
+            let obsCornerXorLeft = (position.left + this.pointRadius - this.parentJQuery.offset().left) / this.parentJQuery.width() * 200 - 100;
+            let obsCornerYorTop = (position.top + this.pointRadius - this.parentJQuery.offset().top) / this.parentJQuery.height() * 200 - 100;
             return { X: obsCornerXorLeft, Y: obsCornerYorTop }
         }
 
         /** transform OBS 3D Transform filter coordonates to local (html) Point position */
         protected calculatePointPosition(this: Points, pointLocation: PointLocation, filter: any, parentWidth: number, parentHeight: number, parentOffsetLeft: number, parentOffsetTop: number): Point {
-
-            let left = (filter.settings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - this.pointRadius;
-            let top = (filter.settings[this.getObsPointId(pointLocation) + ".Y"] + 100) / 200 * parentHeight + parentOffsetTop - this.pointRadius;
+            // OBS's view is from -100(%) to 100(%)
+            let left = (filter.filterSettings[this.getObsPointId(pointLocation) + ".X"] + 100) / 200 * parentWidth + parentOffsetLeft - this.pointRadius;
+            let top = (filter.filterSettings[this.getObsPointId(pointLocation) + ".Y"] + 100) / 200 * parentHeight + parentOffsetTop - this.pointRadius;
             return { left: left, top: top };
         }
 

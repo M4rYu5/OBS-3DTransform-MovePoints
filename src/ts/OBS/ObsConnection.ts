@@ -21,8 +21,6 @@ namespace OBS {
 
         private password: string = null;
 
-        private tryAuthMessageIdentifier: string = "MessageIdentifier-TryAuth";
-
         protected webSocket: WebSocket = null;
 
 
@@ -90,18 +88,20 @@ namespace OBS {
             try {
                 this.webSocket = new WebSocket(`ws://${ip}:${port}`);
 
+                //this.webSocket.addEventListener('open', this.socketOnOpen);
+
+                this.webSocket.onopen = this.socketOnOpen;
+                this.webSocket.onmessage = this.socketOnMessage;
+                this.webSocket.onclose = this.socketOnClose;
+                this.webSocket.onerror = this.socketOnError;
+                this.password = password;
+
             }
             catch {
                 this.setObsConnectionResult(ConnectionResult.socketAddressUnreachable);
                 this.webSocket = null;
                 return;
             }
-
-            this.webSocket.onopen = this.socketOnOpen;
-            this.webSocket.onmessage = this.socketOnMessage;
-            this.webSocket.onclose = this.socketOnClose;
-            this.webSocket.onerror = this.socketOnError;
-            this.password = password;
         }
 
         /** Disconnect from web socket */
@@ -188,22 +188,17 @@ namespace OBS {
                 if (obj.d.rpcVersion != 1) {
                     CustomLogger.Log("server responded with rpc version " + obj.d.rpcVersion + ", but the client expected version 1.", CustomLogger.LogType.info);
                 }
-                if (obj.d.authentication != null) {
-                    let authToken = this.compute_auth_token(obj.d.authentication.challenge, obj.d.authentication.salt)
-                    let response = {
-                        "op": 1,
-                        "d": {
-                          "rpcVersion": 1,
-                          "authentication": authToken,
-                          "eventSubscriptions": 0
-                        }
-                      };
-                      this.webSocket.send(JSON.stringify(response));
-                      return true;
-                }
-                else{
-                    CustomLogger.Log("[AUTH DONE]", CustomLogger.LogType.info);
-                }
+                let authToken = obj.d.authentication  == null ? null : this.compute_auth_token(obj.d.authentication.challenge, obj.d.authentication.salt);
+                let response = {
+                    "op": 1,
+                    "d": {
+                        "rpcVersion": 1,
+                        "authentication": authToken,
+                        "eventSubscriptions": 0
+                    }
+                };
+                this.webSocket.send(JSON.stringify(response));
+                return true;
             }
             if (obj.op == 1){
                 // this is the message send from the client to the server after Hello
