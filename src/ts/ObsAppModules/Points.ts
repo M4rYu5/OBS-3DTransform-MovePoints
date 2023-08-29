@@ -101,9 +101,9 @@ namespace ObsAppModules {
          * @param newPosition is a {top, left} type through which is received the new position
          */
         protected onPointDrag(this: Points, pointLocation: PointLocation, newPosition: any): void {
-            console.log(newPosition.left, newPosition.top);
-
-            let corner: Corner = this.calculateCornerPosition(pointLocation, newPosition)
+            
+            let newPoint: Point = {left: newPosition.left, top: newPosition.top}
+            let corner: Corner = this.htmlToObsCornerPosition(newPoint)
             let pointId: string = this.getObsPointId(pointLocation);
 
             let message = '{ "requestType": "SetSourceFilterSettings", "requestData": { "sourceName": "'
@@ -207,9 +207,9 @@ namespace ObsAppModules {
         }
 
         /** transform local Point (html) position into OBS 3D Transform filter coordonates */
-        protected calculateCornerPosition(this: Points, pointLocation: PointLocation, newPosition: any): Corner {
-            let obsCornerXorLeft = (newPosition.left + this.pointRadius - this.parentJQuery.offset().left) / this.parentJQuery.width() * 200 - 100;
-            let obsCornerYorTop = (newPosition.top + this.pointRadius - this.parentJQuery.offset().top) / this.parentJQuery.height() * 200 - 100;
+        protected htmlToObsCornerPosition(this: Points, position: Point): Corner {
+            let obsCornerXorLeft = (position.left + this.pointRadius - this.parentJQuery.offset().left) / this.parentJQuery.width() * 200 - 100;
+            let obsCornerYorTop = (position.top + this.pointRadius - this.parentJQuery.offset().top) / this.parentJQuery.height() * 200 - 100;
             return { X: obsCornerXorLeft, Y: obsCornerYorTop }
         }
 
