@@ -1,3 +1,7 @@
+# Archived
+This project was created as a UI for StreamFX. StreamFX allowed free transformation of sources in OBS by changing each corner’s position (in text). Since it is no longer maintained nor compatible with OBS, this project has been ***Archived***.
+>  All open issues have been [closed with 'Archived' label](https://github.com/M4rYu5/OBS-3DTransform-MovePoints/issues?q=label%3AArchived+is%3Aclosed).
+
 # Project
 [work in progress] Browser base Free Transform for OBS. _Requires [OBS WebSocket](https://obsproject.com/forum/resources/obs-websocket-remote-control-obs-studio-from-websockets.466/) and [StreamFX](https://obsproject.com/forum/threads/streamfx-for-obs%C2%AE-studio.76619/) OBS plugins_.
 
